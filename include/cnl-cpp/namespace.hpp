@@ -388,9 +388,11 @@ private:
      * @param content The content which may have been processed from the Data
      * packet, e.g. by decrypting.
      */
+public: // Make this public to be called by debugOnContentTransformed.
     void
     onContentTransformed
       (const ndn::ptr_lib::shared_ptr<ndn::Data>& data, const ndn::Blob& content);
+private:
 
     void
     fireOnContentSet(Namespace& contentNamespace);
@@ -425,6 +427,13 @@ private:
   static uint64_t lastCallbackId_;
 #endif
 public:
+  void
+  debugOnContentTransformed
+    (const ndn::ptr_lib::shared_ptr<ndn::Data>& data, const ndn::Blob& content)
+  {
+    impl_->onContentTransformed(data, content);
+  }
+
   bool debugSegmentStreamDidExpressInterest_;
 };
 
