@@ -288,7 +288,7 @@ private:
     /**
      * Create a new Impl, which should belong to a shared_ptr.
      * @param outerNamespace The Namespace which is creating this inner Imp.
-     * @name See the Namespace constructor.
+     * @param name See the Namespace constructor.
      */
     Impl(Namespace& outerNamespace, const ndn::Name& name)
     : outerNamespace_(outerNamespace), name_(name), parent_(0), face_(0),
