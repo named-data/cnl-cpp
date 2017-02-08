@@ -62,7 +62,7 @@ Namespace::Impl::getChild(const Name& descendantName)
     const Name::Component& nextComponent =
       descendantName[descendantNamespace->impl_->name_.size()];
 
-    std::map<Name::Component, ptr_lib::shared_ptr<Namespace>>::iterator
+    map<Name::Component, ptr_lib::shared_ptr<Namespace>>::iterator
       child = descendantNamespace->impl_->children_.find(nextComponent);
     if (child !=  descendantNamespace->impl_->children_.end())
       descendantNamespace = child->second.get();
