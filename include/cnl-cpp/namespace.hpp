@@ -60,7 +60,7 @@ public:
    * of the name.
    */
   Namespace(const ndn::Name& name)
-  : impl_(new Impl(*this, name))
+  : impl_(new Impl(*this, name)), debugSegmentStreamDidExpressInterest_(false)
   {
   }
 
@@ -429,6 +429,8 @@ private:
   // Not using Boost asio multi-threading, so we can use a normal uint64_t.
   static uint64_t lastCallbackId_;
 #endif
+public:
+  bool debugSegmentStreamDidExpressInterest_;
 };
 
 }
