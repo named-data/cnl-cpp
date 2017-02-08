@@ -38,6 +38,13 @@ Namespace::getNextCallbackId()
   return ++lastCallbackId_;
 }
 
+Namespace::Impl::Impl(Namespace& outerNamespace, const Name& name)
+: outerNamespace_(outerNamespace), name_(name), parent_(0), face_(0),
+  transformContent_(TransformContent())
+{
+  defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
+}
+
 Namespace&
 Namespace::Impl::getRoot()
 {

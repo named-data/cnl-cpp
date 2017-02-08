@@ -290,12 +290,7 @@ private:
      * @param outerNamespace The Namespace which is creating this inner Imp.
      * @param name See the Namespace constructor.
      */
-    Impl(Namespace& outerNamespace, const ndn::Name& name)
-    : outerNamespace_(outerNamespace), name_(name), parent_(0), face_(0),
-      transformContent_(TransformContent())
-    {
-      defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
-    }
+    Impl(Namespace& outerNamespace, const ndn::Name& name);
 
     const ndn::Name&
     getName() const { return name_; }
