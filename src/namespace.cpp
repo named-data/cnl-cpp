@@ -19,6 +19,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+#include <ndn-cpp/util/exponential-re-express.hpp>
 #include <ndn-cpp/util/logging.hpp>
 #include <cnl-cpp/namespace.hpp>
 
@@ -123,6 +124,23 @@ Namespace::Impl::addOnContentSet(const OnContentSet& onContentSet)
   uint64_t callbackId = getNextCallbackId();
   onContentSetCallbacks_[callbackId] = onContentSet;
   return callbackId;
+}
+
+void
+Namespace::Impl::expressInterest(const Interest *interestTemplate)
+{
+  Face* face = getFace();
+  if (!face)
+    throw runtime_error("A Face object has not been set for this or a parent");
+
+  if (!interestTemplate)
+    interestTemplate = &defaultInterestTemplate_;
+  face->expressInterest
+    (name_, interestTemplate,
+     bind(&Namespace::Impl::onData, shared_from_this(), _1, _2),
+     ExponentialReExpress::makeOnTimeout
+       (face, bind(&Namespace::Impl::onData, shared_from_this(), _1, _2),
+        OnTimeout()));
 }
 
 void
@@ -244,6 +262,14 @@ Namespace::Impl::fireOnContentSet(Namespace* contentNamespace)
       }
     }
   }
+}
+
+void
+Namespace::Impl::onData
+  (const ptr_lib::shared_ptr<const Interest>& interest,
+   const ptr_lib::shared_ptr<Data>& data)
+{
+  getChild(data->getName()).setData(data);
 }
 
 #ifdef NDN_CPP_HAVE_BOOST_ASIO

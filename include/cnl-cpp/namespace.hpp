@@ -228,7 +228,25 @@ public:
   void
   setFace(ndn::Face* face) { impl_->setFace(face); }
 
-  // TODO: expressInterest
+  /**
+   * Call expressInterest on this (or a parent's) Face where the interest name
+   * is the name of this Namespace node. When the Data packet is received this
+   * calls setData, so you should use a callback with addOnContentSet. This uses
+   * ExponentialReExpress to re-express a timed-out interest with longer
+   * lifetimes.
+   * TODO: How to alert the application on a final interest timeout?
+   * TODO: Replace this by a mechanism for requesting a Data object which is
+   * more general than a Face network operation.
+   * @param interestTemplate (optional) The interest template for
+   * expressInterest. If omitted, just use a default interest lifetime.
+   * @throws runtime_error if a Face object has not been set for this or a
+   * parent Namespace node.
+   */
+  void
+  expressInterest(const ndn::Interest *interestTemplate = 0)
+  {
+    impl_->expressInterest(interestTemplate);
+  }
 
   /**
    * Remove the callback with the given callbackId. This does not search for the
@@ -275,7 +293,9 @@ private:
     Impl(Namespace* outerNamespace, const ndn::Name& name)
     : outerNamespace_(outerNamespace), name_(name), parent_(0), face_(0),
       transformContent_(TransformContent())
-    {}
+    {
+      defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
+    }
 
     const ndn::Name&
     getName() const { return name_; }
@@ -327,7 +347,8 @@ private:
     void
     setFace(ndn::Face* face) { face_ = face; }
 
-    // TODO: expressInterest
+    void
+    expressInterest(const ndn::Interest *interestTemplate);
 
     void
     removeCallback(uint64_t callbackId);
@@ -379,6 +400,10 @@ private:
     void
     fireOnContentSet(Namespace* contentNamespace);
 
+    void
+    onData(const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
+           const ndn::ptr_lib::shared_ptr<ndn::Data>& data);
+
     Namespace* outerNamespace_;
     ndn::Name name_;
     Namespace* parent_;
@@ -392,6 +417,7 @@ private:
     // The key is the callback ID. The value is the OnContentSet function.
     std::map<uint64_t, OnContentSet> onContentSetCallbacks_;
     TransformContent transformContent_;
+    ndn::Interest defaultInterestTemplate_;
   };
 
   ndn::ptr_lib::shared_ptr<Impl> impl_;
