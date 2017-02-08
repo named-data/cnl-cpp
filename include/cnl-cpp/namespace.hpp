@@ -19,8 +19,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-#ifndef NDN_NAMESPACE_HPP
-#define NDN_NAMESPACE_HPP
+#ifndef CNL_CPP_NAMESPACE_HPP
+#define CNL_CPP_NAMESPACE_HPP
 
 #include <map>
 #include <ndn-cpp/face.hpp>
