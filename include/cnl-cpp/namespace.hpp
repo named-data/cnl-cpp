@@ -37,11 +37,11 @@ namespace cnl_cpp {
 class Namespace {
 public:
   typedef ndn::func_lib::function<void
-    (Namespace* nameSpace, Namespace* addedNamespace,
+    (Namespace& nameSpace, Namespace& addedNamespace,
      uint64_t callbackId)> OnNameAdded;
 
   typedef ndn::func_lib::function<void
-    (Namespace* nameSpace, Namespace* contentNamespace,
+    (Namespace& nameSpace, Namespace& contentNamespace,
      uint64_t callbackId)> OnContentSet;
 
   typedef ndn::func_lib::function<void
@@ -60,7 +60,7 @@ public:
    * of the name.
    */
   Namespace(const ndn::Name& name)
-  : impl_(new Impl(this, name))
+  : impl_(new Impl(*this, name))
   {
   }
 
@@ -290,7 +290,7 @@ private:
      * @param outerNamespace The Namespace which is creating this inner Imp.
      * @name See the Namespace constructor.
      */
-    Impl(Namespace* outerNamespace, const ndn::Name& name)
+    Impl(Namespace& outerNamespace, const ndn::Name& name)
     : outerNamespace_(outerNamespace), name_(name), parent_(0), face_(0),
       transformContent_(TransformContent())
     {
@@ -383,7 +383,7 @@ private:
     createChild(const ndn::Name::Component& component, bool fireCallbacks);
 
     void
-    fireOnNameAdded(Namespace* addedNamespace);
+    fireOnNameAdded(Namespace& addedNamespace);
 
     /**
      * Set data_ and content_ to the given values and fire the OnContentSet
@@ -398,13 +398,13 @@ private:
       (const ndn::ptr_lib::shared_ptr<ndn::Data>& data, const ndn::Blob& content);
 
     void
-    fireOnContentSet(Namespace* contentNamespace);
+    fireOnContentSet(Namespace& contentNamespace);
 
     void
     onData(const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
            const ndn::ptr_lib::shared_ptr<ndn::Data>& data);
 
-    Namespace* outerNamespace_;
+    Namespace& outerNamespace_;
     ndn::Name name_;
     Namespace* parent_;
     // The key is a Name::Component. The value is the child Namespace.

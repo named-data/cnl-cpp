@@ -41,7 +41,7 @@ Namespace::getNextCallbackId()
 Namespace&
 Namespace::Impl::getRoot()
 {
-  Namespace* result = outerNamespace_;
+  Namespace* result = &outerNamespace_;
   while (result->impl_->parent_)
     result = result->impl_->parent_;
   return *result;
@@ -57,7 +57,7 @@ Namespace::Impl::getChild(const Name& descendantName)
   // Find or create the child node whose name equals the descendantName.
   // We know descendantNamespace is a prefix, so we can just go by
   // component count instead of a full compare.
-  Namespace* descendantNamespace = outerNamespace_;
+  Namespace* descendantNamespace = &outerNamespace_;
   while (descendantNamespace->impl_->name_.size() < descendantName.size()) {
     const Name::Component& nextComponent =
       descendantName[descendantNamespace->impl_->name_.size()];
@@ -153,7 +153,7 @@ Namespace::Impl::removeCallback(uint64_t callbackId)
 Face*
 Namespace::Impl::getFace()
 {
-  Namespace* nameSpace = outerNamespace_;
+  Namespace* nameSpace = &outerNamespace_;
   while (nameSpace) {
     if (nameSpace->impl_->face_)
       return nameSpace->impl_->face_;
@@ -166,7 +166,7 @@ Namespace::Impl::getFace()
 Namespace::TransformContent
 Namespace::Impl::getTransformContent()
 {
-  Namespace* nameSpace = outerNamespace_;
+  Namespace* nameSpace = &outerNamespace_;
   while (nameSpace) {
     if (nameSpace->impl_->transformContent_)
       return nameSpace->impl_->transformContent_;
@@ -181,13 +181,13 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
 {
   ptr_lib::shared_ptr<Namespace> child
     (new Namespace(Name(name_).append(component)));
-  child->impl_->parent_ = outerNamespace_;
+  child->impl_->parent_ = &outerNamespace_;
   children_[component] = child;
 
   if (fireCallbacks) {
-    Namespace* nameSpace = outerNamespace_;
+    Namespace* nameSpace = &outerNamespace_;
     while (nameSpace) {
-      nameSpace->impl_->fireOnNameAdded(child.get());
+      nameSpace->impl_->fireOnNameAdded(*child);
       nameSpace = nameSpace->impl_->parent_;
     }
   }
@@ -196,7 +196,7 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
 }
 
 void
-Namespace::Impl::fireOnNameAdded(Namespace* addedNamespace)
+Namespace::Impl::fireOnNameAdded(Namespace& addedNamespace)
 {
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
@@ -230,7 +230,7 @@ Namespace::Impl::onContentTransformed
   content_ = content;
 
   // Fire callbacks.
-  Namespace* nameSpace = outerNamespace_;
+  Namespace* nameSpace = &outerNamespace_;
   while (nameSpace) {
     nameSpace->impl_->fireOnContentSet(outerNamespace_);
     nameSpace = nameSpace->impl_->parent_;
@@ -238,7 +238,7 @@ Namespace::Impl::onContentTransformed
 }
 
 void
-Namespace::Impl::fireOnContentSet(Namespace* contentNamespace)
+Namespace::Impl::fireOnContentSet(Namespace& contentNamespace)
 {
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
