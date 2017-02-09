@@ -14,8 +14,8 @@ and update the build system, see Development Prerequisites.)
 * Optional: Doxygen (to make documentation)
 * Optional: Boost (min version 1.48) with asio (for ThreadsafeFace and async I/O in NDN-CPP)
 
-The steps to install the prerequisites are the same as in NDN-CPP. Please see
-https://github.com/named-data/ndn-cpp/blob/master/INSTALL.md
+The steps to install the prerequisites are the same as to build and install NDN-CPP.
+Please see https://github.com/named-data/ndn-cpp/blob/master/INSTALL.md .
 
 Build
 =====
