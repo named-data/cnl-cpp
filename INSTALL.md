@@ -24,9 +24,9 @@ Build
 =====
 (These are instructions to build CNL-CPP. To do development of CNL-CPP code and update the build system, see Development.)
 
-To build in a terminal, change directory to the CNL-CPP root.  Enter:
+To build in a terminal, change directory to the CNL-CPP root. Enter:
 
-    ./configure
+    ./configure CPPFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib
     make
     sudo make install
 
