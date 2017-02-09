@@ -17,6 +17,9 @@ and update the build system, see Development Prerequisites.)
 The steps to install the prerequisites are the same as to build and install NDN-CPP.
 Please see https://github.com/named-data/ndn-cpp/blob/master/INSTALL.md .
 
+[Ubuntu only] After installing NDN-CPP, be sure to update the path to the
+shared libraries using `sudo /sbin/ldconfig` .
+
 Build
 =====
 (These are instructions to build CNL-CPP. To do development of CNL-CPP code and update the build system, see Development.)
