@@ -279,6 +279,8 @@ public:
   }
 
 private:
+  friend class NacConsumerHandler; // Debug: temporary;
+
   /**
    * Namespace::Impl does the work of Namespace. It is a separate class so that
    * Namespace can create an instance in a shared_ptr to use in callbacks.
@@ -349,6 +351,8 @@ private:
     removeCallback(uint64_t callbackId);
 
   private:
+    friend class NacConsumerHandler; // Debug: temporary;
+
     /**
      * Get the Face set by setFace on this or a parent Namespace node.
      * @return The Face, or null if not set on this or any parent.
