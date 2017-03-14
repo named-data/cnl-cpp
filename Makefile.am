@@ -20,20 +20,28 @@ lib_LTLIBRARIES = libcnl-cpp.la
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcnl-cpp.pc
 
-noinst_PROGRAMS = bin/test-segmented
+noinst_PROGRAMS = bin/test-nac-consumer bin/test-nac-producer bin/test-segmented
 
 # Public C++ headers.
 # NOTE: If a new directory is added, then add it to cnl_cpp_cpp_headers in include/Makefile.am.
 cnl_cpp_cpp_headers = \
+  include/cnl-cpp/nac-consumer-handle.hpp \
   include/cnl-cpp/namespace.hpp \
   include/cnl-cpp/segment-stream.hpp \
   include/cnl-cpp/segmented-content.hpp
 
 # C++ code.
 libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
+  src/nac-consumer-handle.cpp \
   src/namespace.cpp \
   src/segment-stream.cpp \
   src/segmented-content.cpp
+
+bin_test_nac_consumer_SOURCES = examples/test-nac-consumer.cpp
+bin_test_nac_consumer_LDADD = libcnl-cpp.la
+
+bin_test_nac_producer_SOURCES = examples/test-nac-producer.cpp
+bin_test_nac_producer_LDADD = libcnl-cpp.la
 
 bin_test_segmented_SOURCES = examples/test-segmented.cpp
 bin_test_segmented_LDADD = libcnl-cpp.la

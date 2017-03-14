@@ -93,7 +93,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-noinst_PROGRAMS = bin/test-segmented$(EXEEXT)
+noinst_PROGRAMS = bin/test-nac-consumer$(EXEEXT) \
+	bin/test-nac-producer$(EXEEXT) bin/test-segmented$(EXEEXT)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_boost_asio.m4 \
@@ -148,14 +149,23 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libcnl_cpp_la_LIBADD =
 am__objects_1 =
 am__dirstamp = $(am__leading_dot)dirstamp
-am_libcnl_cpp_la_OBJECTS = $(am__objects_1) src/namespace.lo \
-	src/segment-stream.lo src/segmented-content.lo
+am_libcnl_cpp_la_OBJECTS = $(am__objects_1) src/nac-consumer-handle.lo \
+	src/namespace.lo src/segment-stream.lo \
+	src/segmented-content.lo
 libcnl_cpp_la_OBJECTS = $(am_libcnl_cpp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
 PROGRAMS = $(noinst_PROGRAMS)
+am_bin_test_nac_consumer_OBJECTS =  \
+	examples/test-nac-consumer.$(OBJEXT)
+bin_test_nac_consumer_OBJECTS = $(am_bin_test_nac_consumer_OBJECTS)
+bin_test_nac_consumer_DEPENDENCIES = libcnl-cpp.la
+am_bin_test_nac_producer_OBJECTS =  \
+	examples/test-nac-producer.$(OBJEXT)
+bin_test_nac_producer_OBJECTS = $(am_bin_test_nac_producer_OBJECTS)
+bin_test_nac_producer_DEPENDENCIES = libcnl-cpp.la
 am_bin_test_segmented_OBJECTS = examples/test-segmented.$(OBJEXT)
 bin_test_segmented_OBJECTS = $(am_bin_test_segmented_OBJECTS)
 bin_test_segmented_DEPENDENCIES = libcnl-cpp.la
@@ -212,8 +222,11 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libcnl_cpp_la_SOURCES) $(bin_test_segmented_SOURCES)
-DIST_SOURCES = $(libcnl_cpp_la_SOURCES) $(bin_test_segmented_SOURCES)
+SOURCES = $(libcnl_cpp_la_SOURCES) $(bin_test_nac_consumer_SOURCES) \
+	$(bin_test_nac_producer_SOURCES) $(bin_test_segmented_SOURCES)
+DIST_SOURCES = $(libcnl_cpp_la_SOURCES) \
+	$(bin_test_nac_consumer_SOURCES) \
+	$(bin_test_nac_producer_SOURCES) $(bin_test_segmented_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -496,6 +509,7 @@ pkgconfig_DATA = libcnl-cpp.pc
 # Public C++ headers.
 # NOTE: If a new directory is added, then add it to cnl_cpp_cpp_headers in include/Makefile.am.
 cnl_cpp_cpp_headers = \
+  include/cnl-cpp/nac-consumer-handle.hpp \
   include/cnl-cpp/namespace.hpp \
   include/cnl-cpp/segment-stream.hpp \
   include/cnl-cpp/segmented-content.hpp
@@ -503,10 +517,15 @@ cnl_cpp_cpp_headers = \
 
 # C++ code.
 libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
+  src/nac-consumer-handle.cpp \
   src/namespace.cpp \
   src/segment-stream.cpp \
   src/segmented-content.cpp
 
+bin_test_nac_consumer_SOURCES = examples/test-nac-consumer.cpp
+bin_test_nac_consumer_LDADD = libcnl-cpp.la
+bin_test_nac_producer_SOURCES = examples/test-nac-producer.cpp
+bin_test_nac_producer_LDADD = libcnl-cpp.la
 bin_test_segmented_SOURCES = examples/test-segmented.cpp
 bin_test_segmented_LDADD = libcnl-cpp.la
 dist_noinst_SCRIPTS = autogen.sh
@@ -591,6 +610,8 @@ src/$(am__dirstamp):
 src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: > src/$(DEPDIR)/$(am__dirstamp)
+src/nac-consumer-handle.lo: src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/namespace.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/segment-stream.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
@@ -614,11 +635,23 @@ examples/$(am__dirstamp):
 examples/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) examples/$(DEPDIR)
 	@: > examples/$(DEPDIR)/$(am__dirstamp)
-examples/test-segmented.$(OBJEXT): examples/$(am__dirstamp) \
+examples/test-nac-consumer.$(OBJEXT): examples/$(am__dirstamp) \
 	examples/$(DEPDIR)/$(am__dirstamp)
 bin/$(am__dirstamp):
 	@$(MKDIR_P) bin
 	@: > bin/$(am__dirstamp)
+
+bin/test-nac-consumer$(EXEEXT): $(bin_test_nac_consumer_OBJECTS) $(bin_test_nac_consumer_DEPENDENCIES) $(EXTRA_bin_test_nac_consumer_DEPENDENCIES) bin/$(am__dirstamp)
+	@rm -f bin/test-nac-consumer$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(bin_test_nac_consumer_OBJECTS) $(bin_test_nac_consumer_LDADD) $(LIBS)
+examples/test-nac-producer.$(OBJEXT): examples/$(am__dirstamp) \
+	examples/$(DEPDIR)/$(am__dirstamp)
+
+bin/test-nac-producer$(EXEEXT): $(bin_test_nac_producer_OBJECTS) $(bin_test_nac_producer_DEPENDENCIES) $(EXTRA_bin_test_nac_producer_DEPENDENCIES) bin/$(am__dirstamp)
+	@rm -f bin/test-nac-producer$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(bin_test_nac_producer_OBJECTS) $(bin_test_nac_producer_LDADD) $(LIBS)
+examples/test-segmented.$(OBJEXT): examples/$(am__dirstamp) \
+	examples/$(DEPDIR)/$(am__dirstamp)
 
 bin/test-segmented$(EXEEXT): $(bin_test_segmented_OBJECTS) $(bin_test_segmented_DEPENDENCIES) $(EXTRA_bin_test_segmented_DEPENDENCIES) bin/$(am__dirstamp)
 	@rm -f bin/test-segmented$(EXEEXT)
@@ -633,7 +666,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-consumer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-producer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-segmented.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/nac-consumer-handle.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/namespace.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/segment-stream.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/segmented-content.Plo@am__quote@
