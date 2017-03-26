@@ -37,7 +37,7 @@ public:
    * assemble content. You should use 
    * segmentStream.getNamespace().addOnContentSet to add the callback which is 
    * called when the content is complete. Then you should call 
-   * segmentStream.start().
+   * start().
    * @param segmentStream The SegmentStream where the Namespace is a node whose
    * children are the names of segment Data packets.
    */
@@ -53,6 +53,20 @@ public:
    */
   SegmentStream&
   getSegmentStream() { return impl_->getSegmentStream(); }
+
+  /**
+   * Get the Namespace object for this handler.
+   * @return The Namespace object for this handler.
+   */
+  Namespace&
+  getNamespace() { return impl_->getSegmentStream().getNamespace(); }
+
+  /**
+   * Start fetching segment Data packets. When done, the library will call the
+   * callback given to getNamespace().addOnContentSet .
+   */
+  void
+  start() { impl_->getSegmentStream().start(); }
 
 private:
   /**
