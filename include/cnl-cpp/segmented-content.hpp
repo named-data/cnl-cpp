@@ -34,15 +34,28 @@ class SegmentedContent {
 public:
   /**
    * Create a SegmentedContent object to use the given segmentStream to
-   * assemble content. You should use 
-   * segmentStream.getNamespace().addOnContentSet to add the callback which is 
-   * called when the content is complete. Then you should call 
+   * assemble content. You should use getNamespace().addOnContentSet to add the
+   * callback which is called when the content is complete. Then you should call
    * start().
    * @param segmentStream The SegmentStream where the Namespace is a node whose
    * children are the names of segment Data packets.
    */
   SegmentedContent(SegmentStream& segmentStream)
   : impl_(new Impl(segmentStream))
+  {
+    impl_->initialize();
+  }
+
+  /**
+   * Create a SegmentedContent object to use a SegmentStream to assemble content.
+   * You should use nameSpace.addOnContentSet to add the callback which is
+   * called when the content is complete. Then you should call start().
+   * @param nameSpace The Namespace node whose children are the names of segment
+   * Data packets. This is used to create a SegmentStream which you can access
+   * with getSegmentStream().
+   */
+  SegmentedContent(Namespace& nameSpace)
+  : impl_(new Impl(nameSpace))
   {
     impl_->initialize();
   }
@@ -79,10 +92,17 @@ private:
     /**
      * Create a new Impl, which should belong to a shared_ptr, then call
      * initialize().
-     * @param outerNamespace The Namespace which is creating this inner Imp.
-     * @param segmentStream See the Namespace constructor.
+     * @param segmentStream See the SegmentedContent constructor.
      */
     Impl(SegmentStream& segmentStream);
+
+    /**
+     * Create a new Impl, which should belong to a shared_ptr, then call
+     * initialize().
+     * @param nameSpace See the SegmentedContent constructor. This is used to
+     * create and hold a SegmentStream object.
+     */
+    Impl(Namespace& nameSpace);
 
     /**
      * Complete the work of the constructor. This is needed because we can't
@@ -100,6 +120,7 @@ private:
       (SegmentStream& segmentStream, Namespace* segmentNamespace,
        uint64_t callbackId);
 
+    ndn::ptr_lib::shared_ptr<SegmentStream> segmentStreamHolder_;
     SegmentStream& segmentStream_;
     bool finished_;
     std::vector<ndn::Blob> segments_;

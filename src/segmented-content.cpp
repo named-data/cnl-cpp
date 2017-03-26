@@ -33,6 +33,12 @@ SegmentedContent::Impl::Impl(SegmentStream& segmentStream)
 {
 }
 
+SegmentedContent::Impl::Impl(Namespace& nameSpace)
+: segmentStreamHolder_(new SegmentStream(nameSpace)),
+  segmentStream_(*segmentStreamHolder_), finished_(false), totalSize_(0)
+{
+}
+
 void
 SegmentedContent::Impl::initialize()
 {
