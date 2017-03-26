@@ -210,10 +210,8 @@ int main(int argc, char** argv)
 
     bool enabled = true;
     nameSpace.addOnContentSet(bind(&onContentSet, _1, _2, _3, &enabled));
-
-    SegmentStream segmentStream(nameSpace);
-    SegmentedContent segmentedContent(segmentStream);
-    segmentStream.start();
+    SegmentedContent segmentedContent(nameSpace);
+    segmentedContent.start();
 
     while (enabled) {
       face.processEvents();

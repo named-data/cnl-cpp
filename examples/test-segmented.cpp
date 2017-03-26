@@ -47,10 +47,8 @@ int main(int argc, char** argv)
 
     bool enabled = true;
     page.addOnContentSet(bind(&onContentSet, _1, _2, _3, &enabled));
-
-    SegmentStream segmentStream(page);
-    SegmentedContent segmentedContent(segmentStream);
-    segmentStream.start();
+    SegmentedContent segmentedContent(page);
+    segmentedContent.start();
 
     while (enabled) {
       face.processEvents();
