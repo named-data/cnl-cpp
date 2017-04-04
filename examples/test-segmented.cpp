@@ -42,7 +42,7 @@ int main(int argc, char** argv)
   try {
     Face face("memoria.ndn.ucla.edu");
     Namespace page
-      ("/ndn/edu/ucla/remap/demo/ndn-js-test/named-data.net/project/ndn-ar2011.html/%FDT%F7n%9E");
+      ("/ndn/edu/ucla/remap/demo/ndn-js-test/named-data.net/project/ndn-ar2011.html/%FDX%DC5B");
     page.setFace(&face);
 
     bool enabled = true;
