@@ -97,7 +97,7 @@ SegmentStream::Impl::onContentSet
       metaInfo.getFinalBlockId().isSegment())
     finalSegmentNumber_ = metaInfo.getFinalBlockId().toSegment();
 
-  // Retrieve as many segments as possible from the store.
+  // Report as many segments as possible where the node already has content.
   while (true) {
     int nextSegmentNumber = maxRetrievedSegmentNumber_ + 1;
     Namespace& nextSegment = debugGetRightmostLeaf
