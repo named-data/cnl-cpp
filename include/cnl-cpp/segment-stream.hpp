@@ -153,7 +153,7 @@ private:
     setInterestPipelineSize(int interestPipelineSize);
 
     void
-    start() { namespace_.expressInterest(); }
+    start() { requestNewSegments(); }
 
   private:
     /**
@@ -168,6 +168,9 @@ private:
     void
     onContentSet
       (Namespace& nameSpace, Namespace& contentNamespace, uint64_t callbackId);
+
+    void
+    requestNewSegments();
 
     void
     fireOnSegment(Namespace* segmentNamespace);

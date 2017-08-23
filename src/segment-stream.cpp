@@ -124,7 +124,12 @@ SegmentStream::Impl::onContentSet
     namespace_.expressInterest(&interestTemplate);
   }
 
-  // Request new segments.
+  requestNewSegments();
+}
+
+void
+SegmentStream::Impl::requestNewSegments()
+{
   ptr_lib::shared_ptr<vector<Name::Component>> childComponents =
     namespace_.getChildComponents();
   // First, count how many are already requested and not received.
