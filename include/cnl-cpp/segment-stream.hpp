@@ -110,9 +110,15 @@ public:
    * getNamespace(), calling any onSegment callbacks in order as the segments
    * are received. Even though the segments supplied to onSegment are in order,
    * note that children of the Namespace node are not necessarily added in order.
+   * @param interestCount (optional) The number of initial Interests to send for
+   * segments. By default this just sends an Interest for the first segment and
+   * waits for the response before fetching more segments, but if you know the
+   * number of segments you can reduce latency by initially requesting more
+   * segments. (However, you should not use a number larger than the Interest
+   * pipeline size.) If omitted, use 1.
    */
   void
-  start() { impl_->start(); }
+  start(int interestCount = 1) { impl_->start(interestCount); }
 
 private:
   /**
@@ -153,7 +159,7 @@ private:
     setInterestPipelineSize(int interestPipelineSize);
 
     void
-    start() { requestNewSegments(); }
+    start(int interestCount) { requestNewSegments(interestCount); }
 
   private:
     /**
@@ -170,7 +176,7 @@ private:
       (Namespace& nameSpace, Namespace& contentNamespace, uint64_t callbackId);
 
     void
-    requestNewSegments();
+    requestNewSegments(int maxRequestedSegments);
 
     void
     fireOnSegment(Namespace* segmentNamespace);

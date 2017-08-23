@@ -124,12 +124,15 @@ SegmentStream::Impl::onContentSet
     namespace_.expressInterest(&interestTemplate);
   }
 
-  requestNewSegments();
+  requestNewSegments(interestPipelineSize_);
 }
 
 void
-SegmentStream::Impl::requestNewSegments()
+SegmentStream::Impl::requestNewSegments(int maxRequestedSegments)
 {
+  if (maxRequestedSegments < 1)
+    maxRequestedSegments = 1;
+
   ptr_lib::shared_ptr<vector<Name::Component>> childComponents =
     namespace_.getChildComponents();
   // First, count how many are already requested and not received.
@@ -146,7 +149,7 @@ SegmentStream::Impl::requestNewSegments()
     if (debugGetRightmostLeaf(child).getContent().isNull() &&
         child.debugSegmentStreamDidExpressInterest_) {
       ++nRequestedSegments;
-      if (nRequestedSegments >= interestPipelineSize_)
+      if (nRequestedSegments >= maxRequestedSegments)
         // Already maxed out on requests.
         break;
     }
@@ -154,7 +157,7 @@ SegmentStream::Impl::requestNewSegments()
 
   // Now find unrequested segment numbers and request.
   int segmentNumber = maxRetrievedSegmentNumber_;
-  while (nRequestedSegments < interestPipelineSize_) {
+  while (nRequestedSegments < maxRequestedSegments) {
     ++segmentNumber;
     if (finalSegmentNumber_ >= 0 && segmentNumber > finalSegmentNumber_)
       break;
