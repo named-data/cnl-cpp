@@ -149,9 +149,9 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libcnl_cpp_la_LIBADD =
 am__objects_1 =
 am__dirstamp = $(am__leading_dot)dirstamp
-am_libcnl_cpp_la_OBJECTS = $(am__objects_1) src/nac-consumer-handle.lo \
-	src/namespace.lo src/segment-stream.lo \
-	src/segmented-content.lo
+am_libcnl_cpp_la_OBJECTS = $(am__objects_1) src/content.lo \
+	src/nac-consumer-handle.lo src/namespace.lo \
+	src/segment-stream.lo src/segmented-content.lo
 libcnl_cpp_la_OBJECTS = $(am_libcnl_cpp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -509,6 +509,8 @@ pkgconfig_DATA = libcnl-cpp.pc
 # Public C++ headers.
 # NOTE: If a new directory is added, then add it to cnl_cpp_cpp_headers in include/Makefile.am.
 cnl_cpp_cpp_headers = \
+  include/cnl-cpp/blob-content.hpp \
+  include/cnl-cpp/content.hpp \
   include/cnl-cpp/nac-consumer-handle.hpp \
   include/cnl-cpp/namespace.hpp \
   include/cnl-cpp/segment-stream.hpp \
@@ -517,6 +519,7 @@ cnl_cpp_cpp_headers = \
 
 # C++ code.
 libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
+  src/content.cpp \
   src/nac-consumer-handle.cpp \
   src/namespace.cpp \
   src/segment-stream.cpp \
@@ -610,6 +613,7 @@ src/$(am__dirstamp):
 src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: > src/$(DEPDIR)/$(am__dirstamp)
+src/content.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/nac-consumer-handle.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/namespace.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
@@ -669,6 +673,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-consumer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-producer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-segmented.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/content.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/nac-consumer-handle.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/namespace.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/segment-stream.Plo@am__quote@
