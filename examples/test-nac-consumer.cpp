@@ -238,8 +238,8 @@ onContentSet
    bool* enabled)
 {
   if (&contentNamespace == &nameSpace) {
-    cout << "Got segmented content " << contentNamespace.getContent().toRawStr() <<
-      endl;
+    cout << "Got segmented content " << 
+      contentNamespace.getBlobContent().toRawStr() << endl;
     *enabled = false;
   }
 }
