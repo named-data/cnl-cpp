@@ -28,6 +28,8 @@
 #include <boost/atomic.hpp>
 #endif
 
+#include "blob-content.hpp"
+
 namespace cnl_cpp {
 
 /**
@@ -46,7 +48,7 @@ public:
 
   typedef ndn::func_lib::function<void
     (const ndn::ptr_lib::shared_ptr<ndn::Data>& data,
-     const ndn::Blob& content)> OnContentTransformed;
+     const ndn::ptr_lib::shared_ptr<Content>& content)> OnContentTransformed;
 
   typedef ndn::func_lib::function<void
     (const ndn::ptr_lib::shared_ptr<ndn::Data>& data,
@@ -171,11 +173,29 @@ public:
   /**
    * Get the content attached to this Namespace object. Note that getContent() 
    * may be different than the content in the attached Data packet (for example 
-   * if the content is decrypted).
-   * @return The content Blob, or an isNull Blob if not set.
+   * if the content is decrypted). In the default behavior, the content is a
+   * BlobContent holding the Blob content of the Data packet, but may be a
+   * different type as determined by the attached handler.
+   * @return The content which is a BlobContent or other type as determined by
+   * the attached handler. You must use ndn::ptr_lib::dynamic_pointer_cast to
+   * cast to the  correct type. If the type is BlobContent, you can use the
+   * convenience method getBlobContent(). If the content is not set, return a
+   * null shared_ptr.
+   */
+  const ndn::ptr_lib::shared_ptr<Content>&
+  getContent() { return impl_->getContent(); }
+
+  /**
+   * Cast getContent() to a BlobContent and return a reference to the Blob. This
+   * throws an exception if the content is null, or if it is not a BlobContent.
+   * @return A reference to the Blob.
    */
   const ndn::Blob&
-  getContent() { return impl_->getContent(); }
+  getBlobContent()
+  {
+    return ndn::ptr_lib::dynamic_pointer_cast<BlobContent>
+      (impl_->getContent())->getBlob();
+  }
 
   /**
    * Add an OnNameAdded callback. When a new name is added to this namespace at
@@ -332,7 +352,7 @@ private:
     const ndn::ptr_lib::shared_ptr<ndn::Data>&
     getData() { return data_; }
 
-    const ndn::Blob&
+    const ndn::ptr_lib::shared_ptr<Content>&
     getContent() { return content_; }
 
     uint64_t
@@ -389,13 +409,14 @@ private:
      * callbacks. This may be called from a transformContent_ handler invoked by
      * setData.
      * @param data The Data packet object given to setData.
-     * @param content The content which may have been processed from the Data
-     * packet, e.g. by decrypting.
+     * @param content An object of a subclass of Content holding the content
+     * which may have been processed from the Data packet, e.g. by decrypting.
      */
 public: // Make this public to be called by debugOnContentTransformed.
     void
     onContentTransformed
-      (const ndn::ptr_lib::shared_ptr<ndn::Data>& data, const ndn::Blob& content);
+      (const ndn::ptr_lib::shared_ptr<ndn::Data>& data, 
+       const ndn::ptr_lib::shared_ptr<Content>& content);
 private:
 
     void
@@ -411,7 +432,7 @@ private:
     // The key is a Name::Component. The value is the child Namespace.
     std::map<ndn::Name::Component, ndn::ptr_lib::shared_ptr<Namespace>> children_;
     ndn::ptr_lib::shared_ptr<ndn::Data> data_;
-    ndn::Blob content_;
+    ndn::ptr_lib::shared_ptr<Content> content_;
     ndn::Face* face_;
     // The key is the callback ID. The value is the OnNameAdded function.
     std::map<uint64_t, OnNameAdded> onNameAddedCallbacks_;
@@ -433,7 +454,8 @@ private:
 public:
   void
   debugOnContentTransformed
-    (const ndn::ptr_lib::shared_ptr<ndn::Data>& data, const ndn::Blob& content)
+    (const ndn::ptr_lib::shared_ptr<ndn::Data>& data, 
+     const ndn::ptr_lib::shared_ptr<Content>& content)
   {
     impl_->onContentTransformed(data, content);
   }
