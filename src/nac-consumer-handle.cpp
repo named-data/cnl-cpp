@@ -55,7 +55,6 @@ NacConsumerHandler::Impl::transformContent
   (const ptr_lib::shared_ptr<Data>& data,
    const Namespace::OnContentTransformed& onContentTransformed)
 {
-  cout << "Debug transformContent " << data->getName().toUri() << endl;
   // TODO: Use Namespace mechanisms to verify the Data packet.
 
   // Prepare the callbacks. We make a shared_ptr object since it needs to
