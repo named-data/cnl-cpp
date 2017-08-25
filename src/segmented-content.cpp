@@ -56,8 +56,8 @@ SegmentedContent::Impl::onSegment
     return;
 
   if (segmentNamespace) {
-    segments_.push_back(segmentNamespace->getContent());
-    totalSize_ += segmentNamespace->getContent().size();
+    segments_.push_back(segmentNamespace->getBlobContent());
+    totalSize_ += segmentNamespace->getBlobContent().size();
   }
   else {
       // Finished. We don't need the callback anymore.
@@ -82,7 +82,8 @@ SegmentedContent::Impl::onSegment
       // Debug: Fix this hack. How can we attach content to a namespace
       // node which has no associated Data packet? Who is authorized to do so?
       segmentStream_.getNamespace().debugOnContentTransformed
-        (ptr_lib::make_shared<Data>(), Blob(content, false));
+        (ptr_lib::make_shared<Data>(), 
+         ptr_lib::make_shared<BlobContent>(Blob(content, false)));
   }
 }
 

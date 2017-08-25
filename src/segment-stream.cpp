@@ -102,7 +102,7 @@ SegmentStream::Impl::onContentSet
     int nextSegmentNumber = maxRetrievedSegmentNumber_ + 1;
     Namespace& nextSegment = debugGetRightmostLeaf
       (namespace_[Name::Component::fromSegment(nextSegmentNumber)]);
-    if (nextSegment.getContent().isNull())
+    if (!nextSegment.getContent())
       break;
 
     maxRetrievedSegmentNumber_ = nextSegmentNumber;
@@ -146,7 +146,7 @@ SegmentStream::Impl::requestNewSegments(int maxRequestedSegments)
     Namespace& child = namespace_[*component];
     // Debug: Check the leaf for content, but use the immediate child
     // for _debugSegmentStreamDidExpressInterest.
-    if (debugGetRightmostLeaf(child).getContent().isNull() &&
+    if (!debugGetRightmostLeaf(child).getContent() &&
         child.debugSegmentStreamDidExpressInterest_) {
       ++nRequestedSegments;
       if (nRequestedSegments >= maxRequestedSegments)
@@ -163,7 +163,7 @@ SegmentStream::Impl::requestNewSegments(int maxRequestedSegments)
       break;
 
     Namespace& segment = namespace_[Name::Component::fromSegment(segmentNumber)];
-    if (!debugGetRightmostLeaf(segment).getContent().isNull() ||
+    if (debugGetRightmostLeaf(segment).getContent() ||
         segment.debugSegmentStreamDidExpressInterest_)
       // Already got the data packet or already requested.
       continue;

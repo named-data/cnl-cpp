@@ -55,6 +55,7 @@ NacConsumerHandler::Impl::transformContent
   (const ptr_lib::shared_ptr<Data>& data,
    const Namespace::OnContentTransformed& onContentTransformed)
 {
+  cout << "Debug transformContent " << data->getName().toUri() << endl;
   // TODO: Use Namespace mechanisms to verify the Data packet.
 
   // Prepare the callbacks. We make a shared_ptr object since it needs to
@@ -72,7 +73,7 @@ NacConsumerHandler::Impl::transformContent
     onPlainText(const Blob& plainText)
     {
       try {
-        onContentTransformed_(data_, plainText);
+        onContentTransformed_(data_, ptr_lib::make_shared<BlobContent>(plainText));
       } catch (const std::exception& ex) {
         _LOG_ERROR("Error in onContentTransformed: " << ex.what());
       } catch (...) {
