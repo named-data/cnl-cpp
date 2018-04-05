@@ -26,7 +26,16 @@ Build
 
 To build in a terminal, change directory to the CNL-CPP root. Enter:
 
+To configure on macOS, enter:
+
+    ./configure CPPFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib"
+
+To configure on other systems, enter:
+
     ./configure CPPFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib
+
+Enter:
+
     make
     sudo make install
 
@@ -59,11 +68,10 @@ These steps are only needed to do development of CNL-CPP code and update the bui
 First follow the Prerequisites for your platform to build NDN-CPP.
 https://github.com/named-data/ndn-cpp/blob/master/INSTALL.md
 
-## OS X 10.9, OS X 10.10.2, OS X 10.11 and macOS 10.12
-Install MacPorts from http://www.macports.org/install.php .
+## OS X 10.9, OS X 10.10.2, OS X 10.11, macOS 10.12 and macOS 10.13
 In a terminal, enter:
 
-    sudo port install automake autoconf libtool doxygen
+    brew install automake libtool doxygen
 
 ## Ubuntu 12.04 (64 bit and 32 bit), Ubuntu 14.04 (64 bit and 32 bit)
 In a terminal, enter:
