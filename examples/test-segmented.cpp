@@ -40,6 +40,7 @@ onContentSet
 int main(int argc, char** argv)
 {
   try {
+    // Connect to the demo host at memoria.ndn.ucla.edu .
     Face face("128.97.98.8");
     Namespace page
       ("/ndn/edu/ucla/remap/demo/ndn-js-test/named-data.net/project/ndn-ar2011.html/%FDT%F7n%9E");
