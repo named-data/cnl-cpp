@@ -40,7 +40,7 @@ Namespace::getNextCallbackId()
 
 Namespace::Impl::Impl(Namespace& outerNamespace, const Name& name)
 : outerNamespace_(outerNamespace), name_(name), parent_(0), face_(0),
-  transformContent_(TransformContent())
+  transformContent_(TransformContent()), maxInterestLifetime_(-1)
 {
   defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
 }
@@ -148,7 +148,7 @@ Namespace::Impl::expressInterest(const Interest *interestTemplate)
      bind(&Namespace::Impl::onData, shared_from_this(), _1, _2),
      ExponentialReExpress::makeOnTimeout
        (face, bind(&Namespace::Impl::onData, shared_from_this(), _1, _2),
-        OnTimeout()));
+        OnTimeout(), getMaxInterestLifetime()));
 }
 
 void
@@ -169,6 +169,20 @@ Namespace::Impl::getFace()
   }
 
   return 0;
+}
+
+ndn::Milliseconds
+Namespace::Impl::getMaxInterestLifetime()
+{
+  Namespace* nameSpace = &outerNamespace_;
+  while (nameSpace) {
+    if (nameSpace->impl_->maxInterestLifetime_ >= 0)
+      return nameSpace->impl_->maxInterestLifetime_;
+    nameSpace = nameSpace->impl_->parent_;
+  }
+
+  // Return the default.
+  return 16000.0;
 }
 
 Namespace::TransformContent

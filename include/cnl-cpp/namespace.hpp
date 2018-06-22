@@ -249,11 +249,24 @@ public:
   setFace(ndn::Face* face) { impl_->setFace(face); }
 
   /**
+   * Set the maximum lifetime for re-expressed interests to be used when this or
+   * a child node calls expressInterest. You can call this on a child node to
+   * set a different maximum lifetime. If you don't set this, the default is
+   * 16000 milliseconds.
+   * @param maxInterestLifetime The maximum lifetime in milliseconds.
+   */
+  void
+  setMaxInterestLifetime(ndn::Milliseconds maxInterestLifetime)
+  {
+    impl_->setMaxInterestLifetime(maxInterestLifetime);
+  }
+
+  /**
    * Call expressInterest on this (or a parent's) Face where the interest name
    * is the name of this Namespace node. When the Data packet is received this
    * calls setData, so you should use a callback with addOnContentSet. This uses
    * ExponentialReExpress to re-express a timed-out interest with longer
-   * lifetimes.
+   * lifetimes, with a maximum determined by setMaxInterestLifetime().
    * TODO: How to alert the application on a final interest timeout?
    * TODO: Replace this by a mechanism for requesting a Data object which is
    * more general than a Face network operation.
@@ -363,6 +376,12 @@ private:
 
     void
     setFace(ndn::Face* face) { face_ = face; }
+  
+    void
+    setMaxInterestLifetime(ndn::Milliseconds maxInterestLifetime)
+    {
+      maxInterestLifetime_ = maxInterestLifetime;
+    }
 
     void
     expressInterest(const ndn::Interest *interestTemplate);
@@ -379,6 +398,14 @@ private:
      */
     ndn::Face*
     getFace();
+
+    /**
+     * Get the maximum Interest lifetime that was set on this or a parent node.
+     * @return The  maximum Interest lifetime, or the default if not set on this
+     * or any parent.
+     */
+    ndn::Milliseconds
+    getMaxInterestLifetime();
 
     /**
      * Get the TransformContent callback on this or a parent Namespace node.
@@ -440,6 +467,7 @@ private:
     std::map<uint64_t, OnContentSet> onContentSetCallbacks_;
     TransformContent transformContent_;
     ndn::Interest defaultInterestTemplate_;
+    ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
   };
 
   ndn::ptr_lib::shared_ptr<Impl> impl_;
