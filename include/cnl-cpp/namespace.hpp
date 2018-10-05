@@ -87,7 +87,7 @@ public:
    * Get the root namespace (which has no parent node).
    * @return The root namespace.
    */
-  Namespace&
+  Namespace*
   getRoot() { return impl_->getRoot(); }
 
   /**
@@ -333,8 +333,8 @@ private:
     Namespace*
     getParent() { return parent_; }
 
-    Namespace&
-    getRoot();
+    Namespace*
+    getRoot() { return root_; }
 
     bool
     hasChild(const ndn::Name::Component& component) const
@@ -455,7 +455,9 @@ private:
 
     Namespace& outerNamespace_;
     ndn::Name name_;
+    // parent_ and root_ may be updated by createChild.
     Namespace* parent_;
+    Namespace* root_;
     // The key is a Name::Component. The value is the child Namespace.
     std::map<ndn::Name::Component, ndn::ptr_lib::shared_ptr<Namespace>> children_;
     ndn::ptr_lib::shared_ptr<ndn::Data> data_;

@@ -39,19 +39,11 @@ Namespace::getNextCallbackId()
 }
 
 Namespace::Impl::Impl(Namespace& outerNamespace, const Name& name)
-: outerNamespace_(outerNamespace), name_(name), parent_(0), face_(0),
-  transformContent_(TransformContent()), maxInterestLifetime_(-1)
+: outerNamespace_(outerNamespace), name_(name), parent_(0), 
+  root_(&outerNamespace), face_(0), transformContent_(TransformContent()),
+  maxInterestLifetime_(-1)
 {
   defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
-}
-
-Namespace&
-Namespace::Impl::getRoot()
-{
-  Namespace* result = &outerNamespace_;
-  while (result->impl_->parent_)
-    result = result->impl_->parent_;
-  return *result;
 }
 
 Namespace&
@@ -204,6 +196,7 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
   ptr_lib::shared_ptr<Namespace> child
     (new Namespace(Name(name_).append(component)));
   child->impl_->parent_ = &outerNamespace_;
+  child->impl_->root_ = outerNamespace_.impl_->root_;
   children_[component] = child;
 
   if (fireCallbacks) {
