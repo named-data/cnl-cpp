@@ -40,8 +40,8 @@ Namespace::getNextCallbackId()
 
 Namespace::Impl::Impl(Namespace& outerNamespace, const Name& name)
 : outerNamespace_(outerNamespace), name_(name), parent_(0), 
-  root_(&outerNamespace), face_(0), transformContent_(TransformContent()),
-  maxInterestLifetime_(-1)
+  root_(&outerNamespace), state_(NamespaceState_NAME_EXISTS), face_(0),
+  transformContent_(TransformContent()), maxInterestLifetime_(-1)
 {
   defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
 }
@@ -111,10 +111,10 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
 }
 
 uint64_t
-Namespace::Impl::addOnNameAdded(const OnNameAdded& onNameAdded)
+Namespace::Impl::addOnStateChanged(const OnStateChanged& onStateChanged)
 {
   uint64_t callbackId = getNextCallbackId();
-  onNameAddedCallbacks_[callbackId] = onNameAdded;
+  onStateChangedCallbacks_[callbackId] = onStateChanged;
   return callbackId;
 }
 
@@ -133,6 +133,9 @@ Namespace::Impl::expressInterest(const Interest *interestTemplate)
   if (!face)
     throw runtime_error("A Face object has not been set for this or a parent");
 
+  // TODO: What if the state is already INTEREST_EXPRESSED?
+  setState(NamespaceState_INTEREST_EXPRESSED);
+
   if (!interestTemplate)
     interestTemplate = &defaultInterestTemplate_;
   face->expressInterest
@@ -146,7 +149,7 @@ Namespace::Impl::expressInterest(const Interest *interestTemplate)
 void
 Namespace::Impl::removeCallback(uint64_t callbackId)
 {
-  onNameAddedCallbacks_.erase(callbackId);
+  onStateChangedCallbacks_.erase(callbackId);
   onContentSetCallbacks_.erase(callbackId);
 }
 
@@ -196,42 +199,51 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
   ptr_lib::shared_ptr<Namespace> child
     (new Namespace(Name(name_).append(component)));
   child->impl_->parent_ = &outerNamespace_;
-  child->impl_->root_ = outerNamespace_.impl_->root_;
+  child->impl_->root_ = root_;
   children_[component] = child;
 
-  if (fireCallbacks) {
-    Namespace* nameSpace = &outerNamespace_;
-    while (nameSpace) {
-      nameSpace->impl_->fireOnNameAdded(*child);
-      nameSpace = nameSpace->impl_->parent_;
-    }
-  }
+  if (fireCallbacks)
+    child->impl_->setState(NamespaceState_NAME_EXISTS);
 
   return *child;
 }
 
 void
-Namespace::Impl::fireOnNameAdded(Namespace& addedNamespace)
+Namespace::Impl::setState(NamespaceState state)
+{
+  state_ = state;
+
+  // Fire callbacks.
+  Namespace* nameSpace = &outerNamespace_;
+  while (nameSpace) {
+    nameSpace->impl_->fireOnStateChanged(outerNamespace_, state);
+    nameSpace = nameSpace->impl_->parent_;
+  }
+}
+
+void
+Namespace::Impl::fireOnStateChanged
+  (Namespace& changedNamespace, NamespaceState state)
 {
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
-  keys.reserve(onNameAddedCallbacks_.size());
-  for (map<uint64_t, OnNameAdded>::iterator i = onNameAddedCallbacks_.begin();
-       i != onNameAddedCallbacks_.end(); ++i)
+  keys.reserve(onStateChangedCallbacks_.size());
+  for (map<uint64_t, OnStateChanged>::iterator i = onStateChangedCallbacks_.begin();
+       i != onStateChangedCallbacks_.end(); ++i)
     keys.push_back(i->first);
 
   for (size_t i = 0; i < keys.size(); ++i) {
     // A callback on a previous pass may have removed this callback, so check.
-    map<uint64_t, OnNameAdded>::iterator entry =
-      onNameAddedCallbacks_.find(keys[i]);
-    if (entry != onNameAddedCallbacks_.end()) {
+    map<uint64_t, OnStateChanged>::iterator entry =
+      onStateChangedCallbacks_.find(keys[i]);
+    if (entry != onStateChangedCallbacks_.end()) {
       try {
-        entry->second(outerNamespace_, addedNamespace, entry->first);
+        entry->second(outerNamespace_, changedNamespace, state, entry->first);
       } catch (const std::exception& ex) {
-        _LOG_ERROR("Namespace::fireOnNameAdded: Error in onNameAdded: " <<
+        _LOG_ERROR("Namespace::fireOnStateChanged: Error in onStateChanged: " <<
                    ex.what());
       } catch (...) {
-        _LOG_ERROR("Namespace::fireOnNameAdded: Error in onNameAdded.");
+        _LOG_ERROR("Namespace::fireOnStateChanged: Error in onStateChanged.");
       }
     }
   }
@@ -244,6 +256,8 @@ Namespace::Impl::onContentTransformed
 {
   data_ = data;
   object_ = object;
+
+  setState(NamespaceState_OBJECT_READY);
 
   // Fire callbacks.
   Namespace* nameSpace = &outerNamespace_;

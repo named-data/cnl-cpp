@@ -33,14 +33,36 @@
 namespace cnl_cpp {
 
 /**
+ * A NamespaceState specifies the state of a Namespace node.
+ */
+enum NamespaceState {
+  NamespaceState_NAME_EXISTS =             0,
+  NamespaceState_INTEREST_EXPRESSED =      1,
+  NamespaceState_INTEREST_TIMEOUT =        2,
+  NamespaceState_INTEREST_NETWORK_NACK =   3,
+  NamespaceState_DATA_RECEIVED =           4,
+  NamespaceState_DESERIALIZING =           5,
+  NamespaceState_DECRYPTING =              6,
+  NamespaceState_DECRYPTION_ERROR =        7,
+  NamespaceState_PRODUCING_OBJECT =        8,
+  NamespaceState_SERIALIZING =             9,
+  NamespaceState_ENCRYPTING =             10,
+  NamespaceState_ENCRYPTION_ERROR =       11,
+  NamespaceState_SIGNING =                12,
+  NamespaceState_SIGNING_ERROR =          13,
+  NamespaceState_OBJECT_READY =           14,
+  NamespaceState_OBJECT_READY_BUT_STALE = 15
+};
+
+/**
  * Namespace is the main class that represents the name tree and related
  * operations to manage it.
  */
 class Namespace {
 public:
   typedef ndn::func_lib::function<void
-    (Namespace& nameSpace, Namespace& addedNamespace,
-     uint64_t callbackId)> OnNameAdded;
+    (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
+     uint64_t callbackId)> OnStateChanged;
 
   typedef ndn::func_lib::function<void
     (Namespace& nameSpace, Namespace& contentNamespace,
@@ -62,7 +84,7 @@ public:
    * of the name.
    */
   Namespace(const ndn::Name& name)
-  : impl_(new Impl(*this, name)), debugSegmentStreamDidExpressInterest_(false)
+  : impl_(new Impl(*this, name))
   {
   }
 
@@ -91,6 +113,14 @@ public:
   getRoot() { return impl_->getRoot(); }
 
   /**
+   * Get the state of this Namespace node. When a Namespace node is first
+   * created, its state is NamespaceState_NAME_EXISTS .
+   * @return The state of this Namespace node.
+   */
+  NamespaceState
+  getState() { return impl_->getState(); }
+
+  /**
    * Check if this node in the namespace has the given child.
    * @param component The name component of the child.
    * @return True if this has a child with the name component.
@@ -104,7 +134,7 @@ public:
   /**
    * Get a child, creating it if needed. This is equivalent to
    * namespace[component]. If a child is created, this calls callbacks as
-   * described by addOnNameAdded.
+   * described by addOnStateChanged.
    * @param component The name component of the immediate child.
    * @return The child Namespace object.
    */
@@ -117,8 +147,8 @@ public:
   /**
    * Get a child (or descendant), creating it if needed. This is equivalent to
    * namespace[descendantName]. If a child is created, this calls callbacks as
-   * described by addOnNameAdded (but does not call the callbacks when creating
-   * intermediate nodes).
+   * described by addOnStateChanged (but does not call the callbacks when
+   * creating intermediate nodes).
    * @param descendantName Find or create the descendant node with the Name
    * (which must have this node's name as a prefix).
    * @return The child Namespace object. However, if name equals the name of
@@ -198,21 +228,26 @@ public:
   }
 
   /**
-   * Add an OnNameAdded callback. When a new name is added to this namespace at
-   * this node or any children, this calls onNameAdded as described below.
-   * @param onNameAdded This calls
-   * onNameAdded(nameSpace, addedNamespace, callbackId)
-   * where nameSpace is this Namespace, addedNamespace is the Namespace of the
-   * added name, and callbackId is the callback ID returned by this method.
+   * Add an onStateChanged callback. When the state changes in this namespace at
+   * this node or any children, this calls onStateChanged as described below.
+   * @param onStateChanged This calls
+   * onStateChanged(namespace, changedNamespace, state, callbackId) where
+   * namespace is this Namespace, changedNamespace is the Namespace (possibly a
+   * child) whose state has changed, state is the new state, and callbackId is
+   * the callback ID returned by this method. If you only care if the state has
+   * changed for this Namespace (and not any of its children) then your callback
+   * can check "if &changedNamespace == &namespace". (Note that the state given
+   * to the callback may be different than changedNamespace.getState() if other
+   * processing has changed the state before this callback is called.)
    * NOTE: The library will log any exceptions thrown by this callback, but for
    * better error handling the callback should catch and properly handle any
    * exceptions.
    * @return The callback ID which you can use in removeCallback().
    */
   uint64_t
-  addOnNameAdded(const OnNameAdded& onNameAdded)
+  addOnStateChanged(const OnStateChanged& onStateChanged)
   {
-    return impl_->addOnNameAdded(onNameAdded);
+    return impl_->addOnStateChanged(onStateChanged);
   }
 
   /**
@@ -285,7 +320,7 @@ public:
    * Remove the callback with the given callbackId. This does not search for the
    * callbackId in child nodes. If the callbackId isn't found, do nothing.
    * @param callbackId The callback ID returned, for example, from
-   * addOnNameAdded.
+   * addOnStateChanged.
    */
   void
   removeCallback(uint64_t callbackId) { impl_->removeCallback(callbackId); }
@@ -336,6 +371,9 @@ private:
     Namespace*
     getRoot() { return root_; }
 
+    NamespaceState
+    getState() { return state_; }
+
     bool
     hasChild(const ndn::Name::Component& component) const
     {
@@ -369,7 +407,7 @@ private:
     getObject() { return object_; }
 
     uint64_t
-    addOnNameAdded(const OnNameAdded& onNameAdded);
+    addOnStateChanged(const OnStateChanged& onStateChanged);
 
     uint64_t
     addOnContentSet(const OnContentSet& onContentSet);
@@ -420,16 +458,26 @@ private:
      * namespace. This private method should only be called if the child does not
      * already exist. The application should use getChild.
      * @param component The name component of the child.
-     * @param fireCallbacks If true, call fireOnNameAdded for this and all parent
-     * nodes. If false, don't call callbacks (for example if creating intermediate
-     * nodes).
+     * @param fireCallbacks If true, call _setState to fire OnStateChanged
+     * callbacks for this and all parent nodes (where the initial state is
+     * NamespaceState_NAME_EXISTS). If false, don't call callbacks (for example
+     * if creating intermediate nodes).
      * @return The child Namespace object.
      */
     Namespace&
     createChild(const ndn::Name::Component& component, bool fireCallbacks);
 
+    /**
+     * Set the state of this Namespace object and call the OnStateChanged
+     * callbacks for this and all parents. This does not check if the state
+     * already has the given state.
+     * @param state The new state.
+     */
     void
-    fireOnNameAdded(Namespace& addedNamespace);
+    setState(NamespaceState state);
+
+    void
+    fireOnStateChanged(Namespace& changedNamespace, NamespaceState state);
 
     /**
      * Set data_ and object_ to the given values and fire the OnContentSet
@@ -460,13 +508,14 @@ private:
     Namespace* root_;
     // The key is a Name::Component. The value is the child Namespace.
     std::map<ndn::Name::Component, ndn::ptr_lib::shared_ptr<Namespace>> children_;
+    NamespaceState state_;
     ndn::ptr_lib::shared_ptr<ndn::Data> data_;
     ndn::ptr_lib::shared_ptr<Object> object_;
     ndn::Face* face_;
-    // The key is the callback ID. The value is the OnNameAdded function.
-    std::map<uint64_t, OnNameAdded> onNameAddedCallbacks_;
+    // The key is the callback ID. The value is the OnStateChanged function.
+    std::map<uint64_t, OnStateChanged> onStateChangedCallbacks_;
     // The key is the callback ID. The value is the OnContentSet function.
-    std::map<uint64_t, OnContentSet> onContentSetCallbacks_;
+    std::map<uint64_t, OnContentSet> onContentSetCallbacks_; // Debug: remove
     TransformContent transformContent_;
     ndn::Interest defaultInterestTemplate_;
     ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
@@ -489,8 +538,6 @@ public:
   {
     impl_->onContentTransformed(data, object);
   }
-
-  bool debugSegmentStreamDidExpressInterest_;
 };
 
 }
