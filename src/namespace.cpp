@@ -107,7 +107,7 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
   else
     // Otherwise just invoke directly.
     onContentTransformed
-      (data, ptr_lib::make_shared<BlobContent>(data->getContent()));
+      (data, ptr_lib::make_shared<BlobObject>(data->getContent()));
 }
 
 uint64_t
@@ -240,10 +240,10 @@ Namespace::Impl::fireOnNameAdded(Namespace& addedNamespace)
 void
 Namespace::Impl::onContentTransformed
   (const ptr_lib::shared_ptr<Data>& data, 
-   const ndn::ptr_lib::shared_ptr<Content>& content)
+   const ndn::ptr_lib::shared_ptr<Object>& object)
 {
   data_ = data;
-  content_ = content;
+  object_ = object;
 
   // Fire callbacks.
   Namespace* nameSpace = &outerNamespace_;
