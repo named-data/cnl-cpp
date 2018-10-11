@@ -171,9 +171,9 @@ createVerifyKeyChain()
 }
 
 static void
-onContentSet
-  (Namespace& nameSpace, Namespace& contentNamespace, uint64_t callbackId,
-   bool* enabled);
+onStateChanged
+  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
+   uint64_t callbackId, bool* enabled);
 
 int main(int argc, char** argv)
 {
@@ -202,7 +202,7 @@ int main(int argc, char** argv)
     handler.addDecryptionKey(userKeyName, fixtureUserDKeyBlob);
 
     bool enabled = true;
-    nameSpace.addOnContentSet(bind(&onContentSet, _1, _2, _3, &enabled));
+    nameSpace.addOnStateChanged(bind(&onStateChanged, _1, _2, _3, _4, &enabled));
     SegmentedContent segmentedContent(nameSpace);
     segmentedContent.start();
 
@@ -221,18 +221,19 @@ int main(int argc, char** argv)
  * This is called to print the content after it is decrypted and re-assembled
  * from segments.
  * @param nameSpace The calling Namespace.
- * @param contentNamespace The Namespace where the content was set.
- * @param callbackId The callback ID returned by addOnContentSet.
+ * @param changedNamespace The Namespace whose state was changed.
+ * @param state The new state.
+ * @param callbackId The callback ID returned by onStateChanged.
  * @param enabled On success or error, set *enabled = false.
  */
 static void
-onContentSet
-  (Namespace& nameSpace, Namespace& contentNamespace, uint64_t callbackId,
-   bool* enabled)
+onStateChanged
+  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
+   uint64_t callbackId, bool* enabled)
 {
-  if (&contentNamespace == &nameSpace) {
+  if (&changedNamespace == &nameSpace && state == NamespaceState_OBJECT_READY) {
     cout << "Got segmented content " << 
-      contentNamespace.getBlobObject().toRawStr() << endl;
+      changedNamespace.getBlobObject().toRawStr() << endl;
     *enabled = false;
   }
 }

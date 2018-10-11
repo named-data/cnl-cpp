@@ -33,9 +33,9 @@ using namespace ndn;
 using namespace ndn::func_lib;
 
 static void
-onContentSet
-  (Namespace& nameSpace, Namespace& contentNamespace, uint64_t callbackId,
-   bool* enabled);
+onStateChanged
+  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
+   uint64_t callbackId, bool* enabled);
 
 int main(int argc, char** argv)
 {
@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     page.setFace(&face);
 
     bool enabled = true;
-    page.addOnContentSet(bind(&onContentSet, _1, _2, _3, &enabled));
+    page.addOnStateChanged(bind(&onStateChanged, _1, _2, _3, _4, &enabled));
     SegmentedContent segmentedContent(page);
     segmentedContent.start();
 
@@ -64,17 +64,18 @@ int main(int argc, char** argv)
 /**
  * This is called to print the content after it is re-assembled from segments.
  * @param nameSpace The calling Namespace.
- * @param contentNamespace The Namespace where the content was set.
- * @param callbackId The callback ID returned by addOnContentSet.
+ * @param changedNamespace The Namespace whose state was changed.
+ * @param state The new state.
+ * @param callbackId The callback ID returned by onStateChanged.
  * @param enabled On success or error, set *enabled = false.
  */
 static void
-onContentSet
-  (Namespace& nameSpace, Namespace& contentNamespace, uint64_t callbackId,
-   bool* enabled)
+onStateChanged
+  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
+   uint64_t callbackId, bool* enabled)
 {
-  if (&contentNamespace == &nameSpace) {
-    cout << "Got segmented content size " << contentNamespace.getBlobObject()->size() <<
+  if (&changedNamespace == &nameSpace && state == NamespaceState_OBJECT_READY) {
+    cout << "Got segmented content size " << changedNamespace.getBlobObject()->size() <<
       endl;
     *enabled = false;
   }
