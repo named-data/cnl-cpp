@@ -19,10 +19,10 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-#include <cnl-cpp/content.hpp>
+#include <cnl-cpp/object.hpp>
 
 namespace cnl_cpp {
 
-Content::~Content() {}
+Object::~Object() {}
 
 }

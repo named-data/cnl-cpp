@@ -19,19 +19,19 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-#ifndef NDN_CONTENT_HPP
-#define NDN_CONTENT_HPP
+#ifndef NDN_OBJECT_HPP
+#define NDN_OBJECT_HPP
 
 namespace cnl_cpp {
 
 /**
- * Content is a base class for content returned by Namespace::getContent().
+ * Object is a base class for the object returned by Namespace::getObject().
  * This is necessary to provide a virtual destructor for derived classes such as
- * BlobContent.
+ * BlobObject.
  */
-class Content {
+class Object {
 public:
-  virtual ~Content();
+  virtual ~Object();
 };
 
 }

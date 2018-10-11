@@ -25,8 +25,8 @@ noinst_PROGRAMS = bin/test-nac-consumer bin/test-nac-producer bin/test-segmented
 # Public C++ headers.
 # NOTE: If a new directory is added, then add it to cnl_cpp_cpp_headers in include/Makefile.am.
 cnl_cpp_cpp_headers = \
-  include/cnl-cpp/blob-content.hpp \
-  include/cnl-cpp/content.hpp \
+  include/cnl-cpp/blob-object.hpp \
+  include/cnl-cpp/object.hpp \
   include/cnl-cpp/nac-consumer-handle.hpp \
   include/cnl-cpp/namespace.hpp \
   include/cnl-cpp/segment-stream.hpp \
@@ -34,7 +34,7 @@ cnl_cpp_cpp_headers = \
 
 # C++ code.
 libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
-  src/content.cpp \
+  src/object.cpp \
   src/nac-consumer-handle.cpp \
   src/namespace.cpp \
   src/segment-stream.cpp \

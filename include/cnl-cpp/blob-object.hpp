@@ -19,27 +19,27 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-#ifndef NDN_BLOB_CONTENT_HPP
-#define NDN_BLOB_CONTENT_HPP
+#ifndef NDN_BLOB_OBJECT_HPP
+#define NDN_BLOB_OBJECT_HPP
 
 #include <ndn-cpp/util/blob.hpp>
-#include "content.hpp"
+#include "object.hpp"
 
 namespace cnl_cpp {
 
 /**
- * A BlobContent extends Content to hold an ndn::Blob and provides convenience
+ * A BlobObject extends Object to hold an ndn::Blob and provides convenience
  * wrapper access methods the same as Blob.
  */
-class BlobContent : public Content {
+class BlobObject : public Object {
 public:
   /**
-   * Create a new BlobContent to hold the given blob. Objects of this type are
+   * Create a new BlobObject to hold the given blob. Objects of this type are
    * created internally by the library, so your application normally does not
    * call this constructor.
    * @param blob
    */
-  BlobContent(const ndn::Blob& blob)
+  BlobObject(const ndn::Blob& blob)
   : blob_(blob) {}
 
   /**
