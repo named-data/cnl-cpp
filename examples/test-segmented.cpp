@@ -74,7 +74,7 @@ onContentSet
    bool* enabled)
 {
   if (&contentNamespace == &nameSpace) {
-    cout << "Got segmented content size " << contentNamespace.getBlobContent()->size() <<
+    cout << "Got segmented content size " << contentNamespace.getBlobObject()->size() <<
       endl;
     *enabled = false;
   }

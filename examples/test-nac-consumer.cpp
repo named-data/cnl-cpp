@@ -232,7 +232,7 @@ onContentSet
 {
   if (&contentNamespace == &nameSpace) {
     cout << "Got segmented content " << 
-      contentNamespace.getBlobContent().toRawStr() << endl;
+      contentNamespace.getBlobObject().toRawStr() << endl;
     *enabled = false;
   }
 }
