@@ -56,8 +56,8 @@ SegmentedContent::Impl::onSegment
     return;
 
   if (segmentNamespace) {
-    segments_.push_back(segmentNamespace->getBlobContent());
-    totalSize_ += segmentNamespace->getBlobContent().size();
+    segments_.push_back(segmentNamespace->getBlobObject());
+    totalSize_ += segmentNamespace->getBlobObject().size();
   }
   else {
       // Finished. We don't need the callback anymore.
@@ -83,7 +83,7 @@ SegmentedContent::Impl::onSegment
       // node which has no associated Data packet? Who is authorized to do so?
       segmentStream_.getNamespace().debugOnContentTransformed
         (ptr_lib::make_shared<Data>(), 
-         ptr_lib::make_shared<BlobContent>(Blob(content, false)));
+         ptr_lib::make_shared<BlobObject>(Blob(content, false)));
   }
 }
 

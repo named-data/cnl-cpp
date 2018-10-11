@@ -72,7 +72,7 @@ NacConsumerHandler::Impl::transformContent
     onPlainText(const Blob& plainText)
     {
       try {
-        onContentTransformed_(data_, ptr_lib::make_shared<BlobContent>(plainText));
+        onContentTransformed_(data_, ptr_lib::make_shared<BlobObject>(plainText));
       } catch (const std::exception& ex) {
         _LOG_ERROR("Error in onContentTransformed: " << ex.what());
       } catch (...) {
