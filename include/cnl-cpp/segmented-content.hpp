@@ -34,9 +34,7 @@ class SegmentedContent {
 public:
   /**
    * Create a SegmentedContent object to use the given segmentStream to
-   * assemble content. You should use getNamespace().addOnContentSet to add the
-   * callback which is called when the content is complete. Then you should call
-   * start().
+   * assemble content.
    * @param segmentStream The SegmentStream where the Namespace is a node whose
    * children are the names of segment Data packets.
    */
@@ -48,8 +46,6 @@ public:
 
   /**
    * Create a SegmentedContent object to use a SegmentStream to assemble content.
-   * You should use nameSpace.addOnContentSet to add the callback which is
-   * called when the content is complete. Then you should call start().
    * @param nameSpace The Namespace node whose children are the names of segment
    * Data packets. This is used to create a SegmentStream which you can access
    * with getSegmentStream().
@@ -76,7 +72,7 @@ public:
 
   /**
    * Start fetching segment Data packets. When done, the library will call the
-   * callback given to getNamespace().addOnContentSet .
+   * callback given to getNamespace().onStateChanged .
    */
   void
   start() { impl_->getSegmentStream().start(); }

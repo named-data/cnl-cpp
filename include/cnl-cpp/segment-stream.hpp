@@ -172,8 +172,9 @@ private:
     debugGetRightmostLeaf(Namespace& nameSpace);
 
     void
-    onContentSet
-      (Namespace& nameSpace, Namespace& contentNamespace, uint64_t callbackId);
+    onStateChanged
+      (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
+       uint64_t callbackId);
 
     void
     requestNewSegments(int maxRequestedSegments);

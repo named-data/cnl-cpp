@@ -40,8 +40,8 @@ SegmentStream::Impl::Impl(SegmentStream& outerSegmentStream, Namespace& nameSpac
 void
 SegmentStream::Impl::initialize()
 {
-  namespace_.addOnContentSet
-    (bind(&SegmentStream::Impl::onContentSet, shared_from_this(), _1, _2, _3));
+  namespace_.addOnStateChanged
+    (bind(&SegmentStream::Impl::onStateChanged, shared_from_this(), _1, _2, _3, _4));
 }
 
 uint64_t
@@ -81,18 +81,17 @@ SegmentStream::Impl::debugGetRightmostLeaf(Namespace& nameSpace)
 }
 
 void
-SegmentStream::Impl::onContentSet
-  (Namespace& nameSpace, Namespace& contentNamespace, uint64_t callbackId)
+SegmentStream::Impl::onStateChanged
+  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
+   uint64_t callbackId)
 {
-  if (!(contentNamespace.getName().size() >= namespace_.getName().size() + 1 &&
-        contentNamespace.getName()[namespace_.getName().size()].isSegment()))
+  if (!(changedNamespace.getName().size() >= namespace_.getName().size() + 1 &&
+          state == NamespaceState_OBJECT_READY &&
+        changedNamespace.getName()[namespace_.getName().size()].isSegment()))
     // Not a segment, ignore.
-    // Debug: If this is the first call, we still need to request segments.
     return;
 
-  // TODO: Use the Namespace mechanism to validate the Data packet.
-
-  MetaInfo& metaInfo = contentNamespace.getData()->getMetaInfo();
+  MetaInfo& metaInfo = changedNamespace.getData()->getMetaInfo();
   if (metaInfo.getFinalBlockId().getValue().size() > 0 &&
       metaInfo.getFinalBlockId().isSegment())
     finalSegmentNumber_ = metaInfo.getFinalBlockId().toSegment();
@@ -113,15 +112,6 @@ SegmentStream::Impl::onContentSet
       fireOnSegment(0);
       return;
     }
-  }
-
-  if (finalSegmentNumber_ < 0 && !didRequestFinalSegment_) {
-    didRequestFinalSegment_ = true;
-    // Try to determine the final segment now.
-    Interest interestTemplate;
-    interestTemplate.setInterestLifetimeMilliseconds(4000.0);
-    interestTemplate.setChildSelector(1);
-    namespace_.expressInterest(&interestTemplate);
   }
 
   requestNewSegments(interestPipelineSize_);
@@ -147,7 +137,7 @@ SegmentStream::Impl::requestNewSegments(int maxRequestedSegments)
     // Debug: Check the leaf for content, but use the immediate child
     // for _debugSegmentStreamDidExpressInterest.
     if (!debugGetRightmostLeaf(child).getObject() &&
-        child.debugSegmentStreamDidExpressInterest_) {
+        child.getState() >= NamespaceState_INTEREST_EXPRESSED) {
       ++nRequestedSegments;
       if (nRequestedSegments >= maxRequestedSegments)
         // Already maxed out on requests.
@@ -164,12 +154,11 @@ SegmentStream::Impl::requestNewSegments(int maxRequestedSegments)
 
     Namespace& segment = namespace_[Name::Component::fromSegment(segmentNumber)];
     if (debugGetRightmostLeaf(segment).getObject() ||
-        segment.debugSegmentStreamDidExpressInterest_)
+        segment.getState() >= NamespaceState_INTEREST_EXPRESSED)
       // Already got the data packet or already requested.
       continue;
 
     ++nRequestedSegments;
-    segment.debugSegmentStreamDidExpressInterest_ = true;
     segment.expressInterest();
   }
 }
