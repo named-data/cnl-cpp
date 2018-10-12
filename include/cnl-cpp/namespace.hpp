@@ -28,6 +28,7 @@
 #include <boost/atomic.hpp>
 #endif
 
+#include <ndn-cpp/security/v2/validation-error.hpp>
 #include "blob-object.hpp"
 
 namespace cnl_cpp {
@@ -55,11 +56,26 @@ enum NamespaceState {
 };
 
 /**
+ * A NamespaceValidateState specifies the state of validating a Namespace node.
+ */
+enum NamespaceValidateState {
+  NamespaceValidateState_WAITING_FOR_DATA = 0,
+  NamespaceValidateState_VALIDATING =       1,
+  NamespaceValidateState_VALIDATE_SUCCESS = 2,
+  NamespaceValidateState_VALIDATE_FAILURE = 3
+};
+
+/**
  * Namespace is the main class that represents the name tree and related
  * operations to manage it.
  */
 class Namespace {
 public:
+  typedef ndn::func_lib::function<void
+    (Namespace& nameSpace, Namespace& changedNamespace,
+     NamespaceValidateState validateState,
+     uint64_t callbackId)> OnValidateStateChanged;
+
   typedef ndn::func_lib::function<void
     (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
      uint64_t callbackId)> OnStateChanged;
@@ -119,6 +135,24 @@ public:
    */
   NamespaceState
   getState() { return impl_->getState(); }
+
+  /**
+   * Get the validate state of this Namespace node. When a Namespace node is
+   * first created, its validate state is
+   * NamespaceValidateState_WAITING_FOR_DATA .
+   * @return The validate state of this Namespace node.
+   */
+  NamespaceValidateState
+  getValidateState() { return impl_->getValidateState(); }
+
+  /**
+   * Get the ValidationError for when the state is set to
+   * NamespaceValidateState_VALIDATE_FAILURE .
+   * @return The ValidationError, or null if it hasn't been set due to a
+   * VALIDATE_FAILURE.
+   */
+  const ndn::ptr_lib::shared_ptr<ndn::ValidationError>&
+  getValidationError() { return impl_->getValidationError(); }
 
   /**
    * Check if this node in the namespace has the given child.
@@ -251,6 +285,32 @@ public:
   }
 
   /**
+   * Add an onValidateStateChanged callback. When the validate state changes in
+   * this namespace at this node or any children, this calls
+   * onValidateStateChanged as described below.
+   * @param onValidateStateChanged This calls
+   * onValidateStateChanged(namespace, changedNamespace, validateState, callbackId)
+   * where namespace is this Namespace, changedNamespace is the Namespace
+   * (possibly a child) whose validate state has changed, validateState is the
+   * new validate state, and callbackId is the callback ID returned by this
+   * method. If you only care if the validate state has changed for this
+   * Namespace (and not any of its children) then your callback can check
+   * "if &changedNamespace == &namespace". (Note that the validate state given
+   * to the callback may be different than changedNamespace.getValidateState() 
+   * if other processing has changed the validate state before this callback is
+   * called.)
+   * NOTE: The library will log any exceptions thrown by this callback, but for
+   * better error handling the callback should catch and properly handle any
+   * exceptions.
+   * @return The callback ID which you can use in removeCallback().
+   */
+  uint64_t
+  addOnValidateStateChanged(const OnValidateStateChanged& onValidateStateChanged)
+  {
+    return impl_->addOnValidateStateChanged(onValidateStateChanged);
+  }
+
+  /**
    * Add an OnContentSet callback. When the content has been set for this
    * Namespace node or any children, this calls onContentSet as described below.
    * @param onContentSet This calls
@@ -374,6 +434,12 @@ private:
     NamespaceState
     getState() { return state_; }
 
+    NamespaceValidateState
+    getValidateState() { return validateState_; }
+
+    const ndn::ptr_lib::shared_ptr<ndn::ValidationError>&
+    getValidationError() { return validationError_; }
+
     bool
     hasChild(const ndn::Name::Component& component) const
     {
@@ -408,6 +474,10 @@ private:
 
     uint64_t
     addOnStateChanged(const OnStateChanged& onStateChanged);
+
+    uint64_t
+    addOnValidateStateChanged
+      (const OnValidateStateChanged& onValidateStateChanged);
 
     uint64_t
     addOnContentSet(const OnContentSet& onContentSet);
@@ -469,8 +539,8 @@ private:
 
     /**
      * Set the state of this Namespace object and call the OnStateChanged
-     * callbacks for this and all parents. This does not check if the state
-     * already has the given state.
+     * callbacks for this and all parents. This does not check if this Namespace
+     * object already has the given state.
      * @param state The new state.
      */
     void
@@ -478,6 +548,19 @@ private:
 
     void
     fireOnStateChanged(Namespace& changedNamespace, NamespaceState state);
+
+    /**
+     * Set the validate state of this Namespace object and call the
+     * OnValidateStateChanged callbacks for this and all parents. This does not
+     * check if this Namespace object already has the given validate state.
+     * @param validateState The new validate state.
+     */
+    void
+    setValidateState(NamespaceValidateState validateState);
+
+    void
+    fireOnValidateStateChanged
+      (Namespace& changedNamespace, NamespaceValidateState validateState);
 
     /**
      * Set data_ and object_ to the given values and fire the OnContentSet
@@ -509,11 +592,15 @@ private:
     // The key is a Name::Component. The value is the child Namespace.
     std::map<ndn::Name::Component, ndn::ptr_lib::shared_ptr<Namespace>> children_;
     NamespaceState state_;
+    NamespaceValidateState validateState_;
+    ndn::ptr_lib::shared_ptr<ndn::ValidationError> validationError_;
     ndn::ptr_lib::shared_ptr<ndn::Data> data_;
     ndn::ptr_lib::shared_ptr<Object> object_;
     ndn::Face* face_;
     // The key is the callback ID. The value is the OnStateChanged function.
     std::map<uint64_t, OnStateChanged> onStateChangedCallbacks_;
+    // The key is the callback ID. The value is the OnValidateStateChanged function.
+    std::map<uint64_t, OnValidateStateChanged> onValidateStateChangedCallbacks_;
     // The key is the callback ID. The value is the OnContentSet function.
     std::map<uint64_t, OnContentSet> onContentSetCallbacks_; // Debug: remove
     TransformContent transformContent_;

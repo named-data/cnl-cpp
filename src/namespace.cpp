@@ -40,7 +40,8 @@ Namespace::getNextCallbackId()
 
 Namespace::Impl::Impl(Namespace& outerNamespace, const Name& name)
 : outerNamespace_(outerNamespace), name_(name), parent_(0), 
-  root_(&outerNamespace), state_(NamespaceState_NAME_EXISTS), face_(0),
+  root_(&outerNamespace), state_(NamespaceState_NAME_EXISTS),
+  validateState_(NamespaceValidateState_WAITING_FOR_DATA), face_(0),
   transformContent_(TransformContent()), maxInterestLifetime_(-1)
 {
   defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
@@ -119,6 +120,15 @@ Namespace::Impl::addOnStateChanged(const OnStateChanged& onStateChanged)
 }
 
 uint64_t
+Namespace::Impl::addOnValidateStateChanged
+  (const OnValidateStateChanged& onValidateStateChanged)
+{
+  uint64_t callbackId = getNextCallbackId();
+  onValidateStateChangedCallbacks_[callbackId] = onValidateStateChanged;
+  return callbackId;
+}
+
+uint64_t
 Namespace::Impl::addOnContentSet(const OnContentSet& onContentSet)
 {
   uint64_t callbackId = getNextCallbackId();
@@ -150,6 +160,7 @@ void
 Namespace::Impl::removeCallback(uint64_t callbackId)
 {
   onStateChangedCallbacks_.erase(callbackId);
+  onValidateStateChangedCallbacks_.erase(callbackId);
   onContentSetCallbacks_.erase(callbackId);
 }
 
@@ -250,6 +261,51 @@ Namespace::Impl::fireOnStateChanged
 }
 
 void
+Namespace::Impl::setValidateState(NamespaceValidateState validateState)
+{
+  validateState_ = validateState;
+
+  // Fire callbacks.
+  Namespace* nameSpace = &outerNamespace_;
+  while (nameSpace) {
+    nameSpace->impl_->fireOnValidateStateChanged(outerNamespace_, validateState);
+    nameSpace = nameSpace->impl_->parent_;
+  }
+}
+
+void
+Namespace::Impl::fireOnValidateStateChanged
+  (Namespace& changedNamespace, NamespaceValidateState validateState)
+{
+  // Copy the keys before iterating since callbacks can change the list.
+  vector<uint64_t> keys;
+  keys.reserve(onValidateStateChangedCallbacks_.size());
+  for (map<uint64_t, OnValidateStateChanged>::iterator i =
+         onValidateStateChangedCallbacks_.begin();
+       i != onValidateStateChangedCallbacks_.end(); ++i)
+    keys.push_back(i->first);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    // A callback on a previous pass may have removed this callback, so check.
+    map<uint64_t, OnValidateStateChanged>::iterator entry =
+      onValidateStateChangedCallbacks_.find(keys[i]);
+    if (entry != onValidateStateChangedCallbacks_.end()) {
+      try {
+        entry->second
+          (outerNamespace_, changedNamespace, validateState, entry->first);
+      } catch (const std::exception& ex) {
+        _LOG_ERROR
+          ("Namespace::fireOnValidateStateChanged: Error in onValidateStateChanged: " <<
+           ex.what());
+      } catch (...) {
+        _LOG_ERROR
+          ("Namespace::fireOnValidateStateChanged: Error in onValidateStateChanged.");
+      }
+    }
+  }
+}
+
+void
 Namespace::Impl::onContentTransformed
   (const ptr_lib::shared_ptr<Data>& data, 
    const ndn::ptr_lib::shared_ptr<Object>& object)
@@ -299,7 +355,11 @@ Namespace::Impl::onData
   (const ptr_lib::shared_ptr<const Interest>& interest,
    const ptr_lib::shared_ptr<Data>& data)
 {
-  getChild(data->getName()).setData(data);
+  Namespace& dataNamespace = getChild(data->getName());
+  dataNamespace.setData(data);
+
+  // TODO: Start the validator.
+  dataNamespace.impl_->setValidateState(NamespaceValidateState_VALIDATING);
 }
 
 #ifdef NDN_CPP_HAVE_BOOST_ASIO
