@@ -81,8 +81,8 @@ Namespace::Impl::getChild(const Name& descendantName)
 ptr_lib::shared_ptr<vector<Name::Component>>
 Namespace::Impl::getChildComponents()
 {
-  ptr_lib::shared_ptr<vector<Name::Component>> result
-    (new vector<Name::Component>);
+  ptr_lib::shared_ptr<vector<Name::Component>> result =
+    ptr_lib::make_shared<vector<Name::Component>>();
   for (map<Name::Component, ptr_lib::shared_ptr<Namespace>>::iterator i = children_.begin();
        i != children_.end(); ++i)
     result->push_back(i->first);
@@ -207,8 +207,8 @@ Namespace::Impl::getTransformContent()
 Namespace&
 Namespace::Impl::createChild(const Name::Component& component, bool fireCallbacks)
 {
-  ptr_lib::shared_ptr<Namespace> child
-    (new Namespace(Name(name_).append(component)));
+  ptr_lib::shared_ptr<Namespace> child =
+    ptr_lib::make_shared<Namespace>(Name(name_).append(component));
   child->impl_->parent_ = &outerNamespace_;
   child->impl_->root_ = root_;
   children_[component] = child;

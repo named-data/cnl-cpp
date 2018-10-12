@@ -52,7 +52,7 @@ public:
     (Namespace& nameSpace, ndn::KeyChain* keyChain, const ndn::Name& groupName,
      const ndn::Name& consumerName,
      const ndn::ptr_lib::shared_ptr<ndn::ConsumerDb>& database)
-  : impl_(new Impl(*this))
+  : impl_(ndn::ptr_lib::make_shared<Impl>(*this))
   {
     impl_->initialize(nameSpace, keyChain, groupName, consumerName, database);
   }

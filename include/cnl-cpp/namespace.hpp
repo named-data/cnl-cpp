@@ -100,7 +100,7 @@ public:
    * of the name.
    */
   Namespace(const ndn::Name& name)
-  : impl_(new Impl(*this, name))
+  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, name))
   {
   }
 

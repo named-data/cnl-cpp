@@ -34,7 +34,7 @@ SegmentedContent::Impl::Impl(SegmentStream& segmentStream)
 }
 
 SegmentedContent::Impl::Impl(Namespace& nameSpace)
-: segmentStreamHolder_(new SegmentStream(nameSpace)),
+: segmentStreamHolder_(ptr_lib::make_shared<SegmentStream>(nameSpace)),
   segmentStream_(*segmentStreamHolder_), finished_(false), totalSize_(0)
 {
 }
@@ -64,8 +64,8 @@ SegmentedContent::Impl::onSegment
       segmentStream.removeCallback(callbackId);
 
       // Concatenate the segments.
-      ptr_lib::shared_ptr<vector<uint8_t> > content
-        (new std::vector<uint8_t>(totalSize_));
+      ptr_lib::shared_ptr<vector<uint8_t> > content =
+        ptr_lib::make_shared<vector<uint8_t> >(totalSize_);
       size_t offset = 0;
       for (size_t i = 0; i < segments_.size(); ++i) {
         const Blob& segment = segments_[i];

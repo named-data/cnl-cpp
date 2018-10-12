@@ -39,7 +39,7 @@ public:
    * children are the names of segment Data packets.
    */
   SegmentedContent(SegmentStream& segmentStream)
-  : impl_(new Impl(segmentStream))
+  : impl_(ndn::ptr_lib::make_shared<Impl>(segmentStream))
   {
     impl_->initialize();
   }
@@ -51,7 +51,7 @@ public:
    * with getSegmentStream().
    */
   SegmentedContent(Namespace& nameSpace)
-  : impl_(new Impl(nameSpace))
+  : impl_(ndn::ptr_lib::make_shared<Impl>(nameSpace))
   {
     impl_->initialize();
   }

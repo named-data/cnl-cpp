@@ -43,7 +43,7 @@ public:
    * Data packets.
    */
   SegmentStream(Namespace& nameSpace)
-  : impl_(new Impl(*this, nameSpace))
+  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, nameSpace))
   {
     impl_->initialize();
   }

@@ -43,7 +43,8 @@ NacConsumerHandler::Impl::initialize
 {
   // TODO: What is the right way to get access to the Face?
   Face* face = nameSpace.impl_->getFace();
-  consumer_.reset(new Consumer(face, keyChain, groupName, consumerName, database));
+  consumer_ = ptr_lib::make_shared<Consumer>
+    (face, keyChain, groupName, consumerName, database);
 
   // TODO: Use a way to set the callback which is better than setting the member.
   nameSpace.impl_->transformContent_ = bind
@@ -91,8 +92,8 @@ NacConsumerHandler::Impl::transformContent
     Namespace::OnContentTransformed onContentTransformed_;
   };
 
-  ptr_lib::shared_ptr<Callbacks> callbacks(new Callbacks
-    (this, data, onContentTransformed));
+  ptr_lib::shared_ptr<Callbacks> callbacks = ptr_lib::make_shared<Callbacks>
+    (this, data, onContentTransformed);
   consumer_->decryptContent
     (*data, bind(&Callbacks::onPlainText, callbacks, _1),
      bind(&Callbacks::onError, callbacks, _1, _2));
