@@ -34,20 +34,12 @@
 #include <ndn-cpp/security/policy/self-verify-policy-manager.hpp>
 #include <ndn-cpp/encrypt/sqlite3-consumer-db.hpp>
 #include <cnl-cpp/nac-consumer-handle.hpp>
-#include <cnl-cpp/segmented-content.hpp>
+#include <cnl-cpp/segmented-object-handler.hpp>
 
 using namespace std;
 using namespace ndn;
 using namespace ndn::func_lib;
 using namespace cnl_cpp;
-
-static uint8_t DATA0_CONTENT[] = {
-  // "This test message was decrypted"
-  0x54, 0x68, 0x69, 0x73, 0x20, 0x74, 0x65, 0x73,
-  0x74, 0x20, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67,
-  0x65, 0x20, 0x77, 0x61, 0x73, 0x20, 0x64, 0x65,
-  0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64
-};
 
 static uint8_t DEFAULT_RSA_PUBLIC_KEY_DER[] = {
   0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
@@ -171,9 +163,8 @@ createVerifyKeyChain()
 }
 
 static void
-onStateChanged
-  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
-   uint64_t callbackId, bool* enabled);
+onSegmentedObject
+  (SegmentedObjectHandler& handler, Blob contentBlob, bool* enabled);
 
 int main(int argc, char** argv)
 {
@@ -202,9 +193,11 @@ int main(int argc, char** argv)
     handler.addDecryptionKey(userKeyName, fixtureUserDKeyBlob);
 
     bool enabled = true;
-    nameSpace.addOnStateChanged(bind(&onStateChanged, _1, _2, _3, _4, &enabled));
-    SegmentedContent segmentedContent(nameSpace);
-    segmentedContent.start();
+    ptr_lib::shared_ptr<SegmentedObjectHandler> segmentedHandler =
+      ptr_lib::make_shared<SegmentedObjectHandler>
+        (bind(&onSegmentedObject, _1, _2, &enabled));
+    nameSpace.setHandler(segmentedHandler);
+    segmentedHandler->start();
 
     while (enabled) {
       face.processEvents();
@@ -220,20 +213,14 @@ int main(int argc, char** argv)
 /**
  * This is called to print the content after it is decrypted and re-assembled
  * from segments.
- * @param nameSpace The calling Namespace.
- * @param changedNamespace The Namespace whose state was changed.
- * @param state The new state.
- * @param callbackId The callback ID returned by onStateChanged.
+ * @param handler The SegmentedObjectHandler.
+ * @param contentBlob The Blob assembled from the contents.
  * @param enabled On success or error, set *enabled = false.
  */
 static void
-onStateChanged
-  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
-   uint64_t callbackId, bool* enabled)
+onSegmentedObject
+  (SegmentedObjectHandler& handler, Blob contentBlob, bool* enabled)
 {
-  if (&changedNamespace == &nameSpace && state == NamespaceState_OBJECT_READY) {
-    cout << "Got segmented content " << 
-      changedNamespace.getBlobObject().toRawStr() << endl;
-    *enabled = false;
-  }
+  cout << "Got segmented content " << contentBlob.toRawStr() << endl;
+  *enabled = false;
 }

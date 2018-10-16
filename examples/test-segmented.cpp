@@ -25,7 +25,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <unistd.h>
-#include <cnl-cpp/segmented-content.hpp>
+#include <cnl-cpp/segmented-object-handler.hpp>
 
 using namespace std;
 using namespace cnl_cpp;
@@ -33,9 +33,8 @@ using namespace ndn;
 using namespace ndn::func_lib;
 
 static void
-onStateChanged
-  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
-   uint64_t callbackId, bool* enabled);
+onSegmentedObject
+  (SegmentedObjectHandler& handler, Blob contentBlob, bool* enabled);
 
 int main(int argc, char** argv)
 {
@@ -46,9 +45,11 @@ int main(int argc, char** argv)
     page.setFace(&face);
 
     bool enabled = true;
-    page.addOnStateChanged(bind(&onStateChanged, _1, _2, _3, _4, &enabled));
-    SegmentedContent segmentedContent(page);
-    segmentedContent.start();
+    ptr_lib::shared_ptr<SegmentedObjectHandler> handler =
+      ptr_lib::make_shared<SegmentedObjectHandler>
+        (bind(&onSegmentedObject, _1, _2, &enabled));
+    page.setHandler(handler);
+    handler->start();
 
     while (enabled) {
       face.processEvents();
@@ -63,20 +64,14 @@ int main(int argc, char** argv)
 
 /**
  * This is called to print the content after it is re-assembled from segments.
- * @param nameSpace The calling Namespace.
- * @param changedNamespace The Namespace whose state was changed.
- * @param state The new state.
- * @param callbackId The callback ID returned by onStateChanged.
+ * @param handler The SegmentedObjectHandler.
+ * @param contentBlob The Blob assembled from the contents.
  * @param enabled On success or error, set *enabled = false.
  */
 static void
-onStateChanged
-  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
-   uint64_t callbackId, bool* enabled)
+onSegmentedObject
+  (SegmentedObjectHandler& handler, Blob contentBlob, bool* enabled)
 {
-  if (&changedNamespace == &nameSpace && state == NamespaceState_OBJECT_READY) {
-    cout << "Got segmented content size " << changedNamespace.getBlobObject()->size() <<
-      endl;
-    *enabled = false;
-  }
+  cout << "Got segmented content size " << contentBlob.size() << endl;
+  *enabled = false;
 }
