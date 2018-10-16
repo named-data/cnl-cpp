@@ -81,6 +81,9 @@ public:
      uint64_t callbackId)> OnStateChanged;
 
   typedef ndn::func_lib::function<void
+    (const ndn::ptr_lib::shared_ptr<Object>& object)> OnDeserialized;
+
+  typedef ndn::func_lib::function<void
     (Namespace& nameSpace, Namespace& contentNamespace,
      uint64_t callbackId)> OnContentSet;
 
@@ -92,9 +95,63 @@ public:
     (const ndn::ptr_lib::shared_ptr<ndn::Data>& data,
      const OnContentTransformed& onContentTransformed)> TransformContent;
 
+  class Impl;
+
+  /**
+   * Namespace::Handler is a base class for handler classes. See setHandler for
+   * details.
+   */
+  class Handler {
+  public:
+    Handler()
+    : namespace_(0)
+    {}
+    
+    /**
+     * Get the Namespace that this Handler is attached to.
+     * @return This Handler's Namespace, or null if this Handler is not attached
+     * to a Namespace.
+     */
+    Namespace&
+    getNamespace() { return *namespace_; }
+
+    /**
+     * An internal method to check if this Handler can deserialize the blob in
+     * order to set the object for the objectNamespace. This should only be
+     * called by the Namespace class. This base implementation just returns
+     * false. The subclass can override.
+     * @param objectNamespace The Namespace node which needs its object
+     * deserialized.
+     * @param blob The serialized bytes to deserialize.
+     * @param onDeserialized If the Handler can deserialize, it should return
+     * true and eventually call onDeserialized(object) with the deserialized
+     * object.
+     * @return True if this Handler can deserialize and will call
+     * onDeserialized, otherwise false.
+     */
+    virtual bool
+    canDeserialize
+      (Namespace& objectNamespace, ndn::Blob blob, OnDeserialized onDeserialized);
+
+  protected:
+    /**
+     * This protected method is called after this Handler's Namespace field is
+     * set by attaching it. A subclass can override to perform actions with
+     * getNamespace() such as adding callbacks to the Namespace.
+     */
+    virtual void
+    onNamespaceSet();
+
+  private:
+    friend Impl;
+
+    Namespace* namespace_;
+  };
+
   /**
    * Create a Namespace object with the given name, and with no parent. This is
-   * the root of the name tree. To create child nodes, use
+   * the root of the name tree. This object must remain allocated as long as any
+   * operations or handlers are using it. To create child nodes, use
    * myNamespace.getChild("foo") or myNamespace["foo"].
    * @param name The name of this root node in the namespace. This makes a copy
    * of the name.
@@ -343,6 +400,12 @@ public:
   void
   setFace(ndn::Face* face) { impl_->setFace(face); }
 
+  Namespace&
+  setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler)
+  {
+    return impl_->setHandler(handler);
+  }
+
   /**
    * Set the maximum lifetime for re-expressed interests to be used when this or
    * a child node calls expressInterest. You can call this on a child node to
@@ -406,7 +469,6 @@ public:
     return getChild(descendantName);
   }
 
-private:
   friend class NacConsumerHandler; // Debug: temporary;
 
   /**
@@ -484,7 +546,10 @@ private:
 
     void
     setFace(ndn::Face* face) { face_ = face; }
-  
+
+    Namespace&
+    setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler);
+
     void
     setMaxInterestLifetime(ndn::Milliseconds maxInterestLifetime)
     {
@@ -597,6 +662,7 @@ private:
     ndn::ptr_lib::shared_ptr<ndn::Data> data_;
     ndn::ptr_lib::shared_ptr<Object> object_;
     ndn::Face* face_;
+    ndn::ptr_lib::shared_ptr<Handler> handler_;
     // The key is the callback ID. The value is the OnStateChanged function.
     std::map<uint64_t, OnStateChanged> onStateChangedCallbacks_;
     // The key is the callback ID. The value is the OnValidateStateChanged function.
@@ -608,6 +674,7 @@ private:
     ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
   };
 
+private:
   ndn::ptr_lib::shared_ptr<Impl> impl_;
 #ifdef NDN_CPP_HAVE_BOOST_ASIO
   // Multi-threading is enabled, so different threads my access this shared

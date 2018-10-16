@@ -31,6 +31,18 @@ INIT_LOGGER("cnl_cpp.Namespace");
 
 namespace cnl_cpp {
 
+bool
+Namespace::Handler::canDeserialize
+  (Namespace& objectNamespace, ndn::Blob blob, OnDeserialized onDeserialized)
+{
+  return false;
+}
+
+void
+Namespace::Handler::onNamespaceSet()
+{
+}
+
 uint64_t
 Namespace::getNextCallbackId()
 {
@@ -134,6 +146,23 @@ Namespace::Impl::addOnContentSet(const OnContentSet& onContentSet)
   uint64_t callbackId = getNextCallbackId();
   onContentSetCallbacks_[callbackId] = onContentSet;
   return callbackId;
+}
+
+Namespace&
+Namespace::Impl::setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler)
+{
+  if (handler_)
+    // TODO: Should we try to chain handlers?
+    throw runtime_error("This Namespace node already has a handler");
+
+  if (handler->namespace_)
+    // TODO: Should we allow attaching to multiple Namespace nodes?
+    throw runtime_error("The handler is already attached to a Namespace node");
+
+  handler->namespace_ = &outerNamespace_;
+  handler->onNamespaceSet();
+  handler_ = handler;
+  return outerNamespace_;
 }
 
 void
