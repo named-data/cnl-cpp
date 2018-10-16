@@ -152,7 +152,8 @@ am__objects_1 =
 am__dirstamp = $(am__leading_dot)dirstamp
 am_libcnl_cpp_la_OBJECTS = $(am__objects_1) src/object.lo \
 	src/nac-consumer-handle.lo src/namespace.lo \
-	src/segment-stream-handler.lo src/segmented-object-handler.lo
+	src/segment-stream-handler.lo src/segmented-object-handler.lo \
+	src/impl/pending-incoming-interest-table.lo
 libcnl_cpp_la_OBJECTS = $(am_libcnl_cpp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -191,7 +192,8 @@ am__depfiles_remade = examples/$(DEPDIR)/test-nac-consumer.Po \
 	src/$(DEPDIR)/nac-consumer-handle.Plo \
 	src/$(DEPDIR)/namespace.Plo src/$(DEPDIR)/object.Plo \
 	src/$(DEPDIR)/segment-stream-handler.Plo \
-	src/$(DEPDIR)/segmented-object-handler.Plo
+	src/$(DEPDIR)/segmented-object-handler.Plo \
+	src/impl/$(DEPDIR)/pending-incoming-interest-table.Plo
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -530,7 +532,9 @@ libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
   src/nac-consumer-handle.cpp \
   src/namespace.cpp \
   src/segment-stream-handler.cpp \
-  src/segmented-object-handler.cpp
+  src/segmented-object-handler.cpp \
+  src/impl/pending-incoming-interest-table.cpp \
+  src/impl/pending-incoming-interest-table.hpp
 
 bin_test_nac_consumer_SOURCES = examples/test-nac-consumer.cpp
 bin_test_nac_consumer_LDADD = libcnl-cpp.la
@@ -637,6 +641,14 @@ src/segment-stream-handler.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/segmented-object-handler.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/impl/$(am__dirstamp):
+	@$(MKDIR_P) src/impl
+	@: > src/impl/$(am__dirstamp)
+src/impl/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/impl/$(DEPDIR)
+	@: > src/impl/$(DEPDIR)/$(am__dirstamp)
+src/impl/pending-incoming-interest-table.lo: src/impl/$(am__dirstamp) \
+	src/impl/$(DEPDIR)/$(am__dirstamp)
 
 libcnl-cpp.la: $(libcnl_cpp_la_OBJECTS) $(libcnl_cpp_la_DEPENDENCIES) $(EXTRA_libcnl_cpp_la_DEPENDENCIES) 
 	$(AM_V_CXXLD)$(CXXLINK) -rpath $(libdir) $(libcnl_cpp_la_OBJECTS) $(libcnl_cpp_la_LIBADD) $(LIBS)
@@ -673,6 +685,8 @@ mostlyclean-compile:
 	-rm -f examples/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/*.lo
+	-rm -f src/impl/*.$(OBJEXT)
+	-rm -f src/impl/*.lo
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -685,6 +699,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/object.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/segment-stream-handler.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/segmented-object-handler.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/impl/$(DEPDIR)/pending-incoming-interest-table.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -723,6 +738,7 @@ clean-libtool:
 	-rm -rf .libs _libs
 	-rm -rf bin/.libs bin/_libs
 	-rm -rf src/.libs src/_libs
+	-rm -rf src/impl/.libs src/impl/_libs
 
 distclean-libtool:
 	-rm -f libtool config.lt
@@ -1084,6 +1100,8 @@ distclean-generic:
 	-rm -f examples/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/$(am__dirstamp)
+	-rm -f src/impl/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/impl/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -1103,6 +1121,7 @@ distclean: distclean-recursive
 	-rm -f src/$(DEPDIR)/object.Plo
 	-rm -f src/$(DEPDIR)/segment-stream-handler.Plo
 	-rm -f src/$(DEPDIR)/segmented-object-handler.Plo
+	-rm -f src/impl/$(DEPDIR)/pending-incoming-interest-table.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-libtool distclean-tags
@@ -1158,6 +1177,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/$(DEPDIR)/object.Plo
 	-rm -f src/$(DEPDIR)/segment-stream-handler.Plo
 	-rm -f src/$(DEPDIR)/segmented-object-handler.Plo
+	-rm -f src/impl/$(DEPDIR)/pending-incoming-interest-table.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

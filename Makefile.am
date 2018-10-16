@@ -38,7 +38,9 @@ libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
   src/nac-consumer-handle.cpp \
   src/namespace.cpp \
   src/segment-stream-handler.cpp \
-  src/segmented-object-handler.cpp
+  src/segmented-object-handler.cpp \
+  src/impl/pending-incoming-interest-table.cpp \
+  src/impl/pending-incoming-interest-table.hpp
 
 bin_test_nac_consumer_SOURCES = examples/test-nac-consumer.cpp
 bin_test_nac_consumer_LDADD = libcnl-cpp.la
