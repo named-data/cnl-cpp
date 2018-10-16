@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 /**
- * Copyright (C) 2017-2018 Regents of the University of California.
+ * Copyright (C) 2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,45 +19,43 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-#ifndef CNL_CPP_SEGMENT_STREAM_HPP
-#define CNL_CPP_SEGMENT_STREAM_HPP
+#ifndef CNL_CPP_SEGMENT_STREAM_HANDLER_HPP
+#define CNL_CPP_SEGMENT_STREAM_HANDLER_HPP
 
 #include "namespace.hpp"
 
 namespace cnl_cpp {
 
 /**
- * SegmentStream attaches to a Namespace node to fetch and return child segment
- * packets in order.
+ * SegmentStreamHandler extends Namespace::Handler and attaches to a Namespace
+ * node to fetch and return child segments in order.
  */
-class SegmentStream {
+class SegmentStreamHandler : public Namespace::Handler {
 public:
   typedef ndn::func_lib::function<void
-    (SegmentStream& segmentStream, Namespace* segmentNamespace,
+    (SegmentStreamHandler& handler, Namespace* segmentNamespace,
      uint64_t callbackId)> OnSegment;
 
   /**
-   * Create a SegmentStream object to attach to the given namespace. You can add
-   * callbacks and set options, then you should call start().
-   * @param nameSpace The Namespace node whose children are the names of segment
-   * Data packets.
+   * Create a SegmentStreamHandler with the optional onSegment callback.
+   * @param onSegment (optional) If supplied, this calls addOnSegment(onSegment).
+   * You may also call addOnSegment directly.
    */
-  SegmentStream(Namespace& nameSpace)
-  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, nameSpace))
+  SegmentStreamHandler(const OnSegment& onSegment = OnSegment())
+  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, onSegment))
   {
-    impl_->initialize();
   }
 
   /**
    * Add an onSegment callback. When a new segment is available, this calls
    * onSegment as described below. Segments are supplied in order.
    * @param onSegment This calls
-   * onSegment(segmentStream, segmentNamespace, callbackId)
-   * where segmentStream is this SegmentStream, segmentNamespace is the
-   * Namespace where you can use segmentNamespace.getContent(), and callbackId
-   * is the callback ID returned by this method. You must check if
-   * segmentNamespace is null because after supplying the final segment, this
-   * calls onSegment(stream, 0, callbackId) to signal the "end of stream".
+   * onSegment(handler, segmentNamespace, callbackId) where handler is this
+   * SegmentStreamHandler, segmentNamespace is the Namespace where you can use
+   * segmentNamespace.getObject(), and callbackId is the callback ID returned by
+   * this method. You must check if segmentNamespace is null because after
+   * supplying the final segment, this calls
+   * onSegment(handler, null, callbackId) to signal the "end of stream".
    * NOTE: The library will log any exceptions thrown by this callback, but for
    * better error handling the callback should catch and properly handle any
    * exceptions.
@@ -79,13 +77,6 @@ public:
   removeCallback(uint64_t callbackId) { impl_->removeCallback(callbackId); }
 
   /**
-   * Get the Namespace object given to the constructor.
-   * @return The Namespace object given to the constructor.
-   */
-  Namespace&
-  getNamespace() { return impl_->getNamespace(); }
-
-  /**
    * Get the number of outstanding interests which this maintains while fetching
    * segments.
    * @return The Interest pipeline size.
@@ -105,6 +96,8 @@ public:
     impl_->setInterestPipelineSize(interestPipelineSize);
   }
 
+  // TODO: get/setInitialInterestCount
+
   /**
    * Start fetching segment Data packets and adding them as children of
    * getNamespace(), calling any onSegment callbacks in order as the segments
@@ -120,37 +113,33 @@ public:
   void
   start(int interestCount = 1) { impl_->start(interestCount); }
 
+protected:
+  virtual void
+  onNamespaceSet();
+
 private:
   /**
-   * SegmentStream::Impl does the work of SegmentStream. It is a separate class
-   * so that SegmentStream can create an instance in a shared_ptr to use in
-   * callbacks.
+   * SegmentStreamHandler::Impl does the work of SegmentStreamHandler. It is a
+   * separate class so that SegmentStreamHandler can create an instance in a
+   * shared_ptr to use in callbacks.
    */
   class Impl : public ndn::ptr_lib::enable_shared_from_this<Impl> {
   public:
     /**
-     * Create a new Impl, which should belong to a shared_ptr, then call
-     * initialize().
-     * @param outerSegmentStream The SegmentStream which is creating this inner Imp.
-     * @param nameSpace See the SegmentStream constructor.
+     * Create a new Impl, which should belong to a shared_ptr.
+     * @param outerHandler The SegmentStreamHandler which is creating this inner
+     * Impl.
+     * @param onSegment See the SegmentStreamHandler constructor.
      */
-    Impl(SegmentStream& outerSegmentStream, Namespace& nameSpace);
-
-    /**
-     * Complete the work of the constructor. This is needed because we can't
-     * call shared_from_this() in the constructor.
-     */
-    void
-    initialize();
+    Impl
+      (SegmentStreamHandler& outerHandler,
+       const OnSegment& onSegment);
 
     uint64_t
     addOnSegment(const OnSegment& onSegment);
 
     void
     removeCallback(uint64_t callbackId);
-
-    Namespace&
-    getNamespace() { return namespace_; }
 
     int
     getInterestPipelineSize() { return interestPipelineSize_; }
@@ -160,6 +149,9 @@ private:
 
     void
     start(int interestCount) { requestNewSegments(interestCount); }
+
+    void
+    onNamespaceSet();
 
   private:
     /**
@@ -182,8 +174,7 @@ private:
     void
     fireOnSegment(Namespace* segmentNamespace);
 
-    SegmentStream& outerSegmentStream_;
-    Namespace& namespace_;
+    SegmentStreamHandler& outerHandler_;
     int maxRetrievedSegmentNumber_;
     bool didRequestFinalSegment_;
     int finalSegmentNumber_;

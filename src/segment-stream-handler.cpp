@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 /**
- * Copyright (C) 2017-2018 Regents of the University of California.
+ * Copyright (C) 2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,33 +19,31 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-#include <cnl-cpp/segment-stream.hpp>
+#include <cnl-cpp/segment-stream-handler.hpp>
 #include <ndn-cpp/util/logging.hpp>
 
 using namespace std;
 using namespace ndn;
 using namespace ndn::func_lib;
 
-INIT_LOGGER("cnl_cpp.SegmentStream");
+INIT_LOGGER("cnl_cpp.SegmentStreamHandler");
 
 namespace cnl_cpp {
 
-SegmentStream::Impl::Impl(SegmentStream& outerSegmentStream, Namespace& nameSpace)
-: outerSegmentStream_(outerSegmentStream), namespace_(nameSpace),
-  maxRetrievedSegmentNumber_(-1), didRequestFinalSegment_(false),
-  finalSegmentNumber_(-1), interestPipelineSize_(8)
-{
-}
-
 void
-SegmentStream::Impl::initialize()
+SegmentStreamHandler::onNamespaceSet() { impl_->onNamespaceSet(); }
+
+SegmentStreamHandler::Impl::Impl
+  (SegmentStreamHandler& outerHandler, const OnSegment& onSegment)
+: outerHandler_(outerHandler), maxRetrievedSegmentNumber_(-1),
+  didRequestFinalSegment_(false), finalSegmentNumber_(-1), interestPipelineSize_(8)
 {
-  namespace_.addOnStateChanged
-    (bind(&SegmentStream::Impl::onStateChanged, shared_from_this(), _1, _2, _3, _4));
+  if (onSegment)
+    addOnSegment(onSegment);
 }
 
 uint64_t
-SegmentStream::Impl::addOnSegment(const OnSegment& onSegment)
+SegmentStreamHandler::Impl::addOnSegment(const OnSegment& onSegment)
 {
   uint64_t callbackId = Namespace::getNextCallbackId();
   onSegmentCallbacks_[callbackId] = onSegment;
@@ -53,21 +51,28 @@ SegmentStream::Impl::addOnSegment(const OnSegment& onSegment)
 }
 
 void
-SegmentStream::Impl::removeCallback(uint64_t callbackId)
+SegmentStreamHandler::Impl::removeCallback(uint64_t callbackId)
 {
   onSegmentCallbacks_.erase(callbackId);
 }
 
 void
-SegmentStream::Impl::setInterestPipelineSize(int interestPipelineSize)
+SegmentStreamHandler::Impl::setInterestPipelineSize(int interestPipelineSize)
 {
   if (interestPipelineSize < 1)
     throw runtime_error("The interestPipelineSize must be at least 1");
   interestPipelineSize_ = interestPipelineSize;
 }
 
+void
+SegmentStreamHandler::Impl::onNamespaceSet()
+{
+  outerHandler_.getNamespace().addOnStateChanged
+    (bind(&SegmentStreamHandler::Impl::onStateChanged, shared_from_this(), _1, _2, _3, _4));
+}
+
 Namespace&
-SegmentStream::Impl::debugGetRightmostLeaf(Namespace& nameSpace)
+SegmentStreamHandler::Impl::debugGetRightmostLeaf(Namespace& nameSpace)
 {
   Namespace* result = &nameSpace;
   while (true) {
@@ -81,13 +86,15 @@ SegmentStream::Impl::debugGetRightmostLeaf(Namespace& nameSpace)
 }
 
 void
-SegmentStream::Impl::onStateChanged
+SegmentStreamHandler::Impl::onStateChanged
   (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
    uint64_t callbackId)
 {
-  if (!(changedNamespace.getName().size() >= namespace_.getName().size() + 1 &&
-          state == NamespaceState_OBJECT_READY &&
-        changedNamespace.getName()[namespace_.getName().size()].isSegment()))
+  if (!(changedNamespace.getName().size() >=
+          outerHandler_.getNamespace().getName().size() + 1 &&
+        state == NamespaceState_OBJECT_READY &&
+        changedNamespace.getName()[
+          outerHandler_.getNamespace().getName().size()].isSegment()))
     // Not a segment, ignore.
     return;
 
@@ -100,7 +107,7 @@ SegmentStream::Impl::onStateChanged
   while (true) {
     int nextSegmentNumber = maxRetrievedSegmentNumber_ + 1;
     Namespace& nextSegment = debugGetRightmostLeaf
-      (namespace_[Name::Component::fromSegment(nextSegmentNumber)]);
+      (outerHandler_.getNamespace()[Name::Component::fromSegment(nextSegmentNumber)]);
     if (!nextSegment.getObject())
       break;
 
@@ -118,13 +125,13 @@ SegmentStream::Impl::onStateChanged
 }
 
 void
-SegmentStream::Impl::requestNewSegments(int maxRequestedSegments)
+SegmentStreamHandler::Impl::requestNewSegments(int maxRequestedSegments)
 {
   if (maxRequestedSegments < 1)
     maxRequestedSegments = 1;
 
   ptr_lib::shared_ptr<vector<Name::Component>> childComponents =
-    namespace_.getChildComponents();
+    outerHandler_.getNamespace().getChildComponents();
   // First, count how many are already requested and not received.
   int nRequestedSegments = 0;
   for (vector<Name::Component>::iterator component = childComponents->begin();
@@ -133,7 +140,7 @@ SegmentStream::Impl::requestNewSegments(int maxRequestedSegments)
       // The namespace contains a child other than a segment. Ignore.
       continue;
 
-    Namespace& child = namespace_[*component];
+    Namespace& child = outerHandler_.getNamespace()[*component];
     // Debug: Check the leaf for content, but use the immediate child
     // for _debugSegmentStreamDidExpressInterest.
     if (!debugGetRightmostLeaf(child).getObject() &&
@@ -152,7 +159,8 @@ SegmentStream::Impl::requestNewSegments(int maxRequestedSegments)
     if (finalSegmentNumber_ >= 0 && segmentNumber > finalSegmentNumber_)
       break;
 
-    Namespace& segment = namespace_[Name::Component::fromSegment(segmentNumber)];
+    Namespace& segment = outerHandler_.getNamespace()[
+      Name::Component::fromSegment(segmentNumber)];
     if (debugGetRightmostLeaf(segment).getObject() ||
         segment.getState() >= NamespaceState_INTEREST_EXPRESSED)
       // Already got the data packet or already requested.
@@ -164,7 +172,7 @@ SegmentStream::Impl::requestNewSegments(int maxRequestedSegments)
 }
 
 void
-SegmentStream::Impl::fireOnSegment(Namespace* segmentNamespace)
+SegmentStreamHandler::Impl::fireOnSegment(Namespace* segmentNamespace)
 {
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
@@ -178,12 +186,12 @@ SegmentStream::Impl::fireOnSegment(Namespace* segmentNamespace)
     map<uint64_t, OnSegment>::iterator entry = onSegmentCallbacks_.find(keys[i]);
     if (entry != onSegmentCallbacks_.end()) {
       try {
-        entry->second(outerSegmentStream_, segmentNamespace, entry->first);
+        entry->second(outerHandler_, segmentNamespace, entry->first);
       } catch (const std::exception& ex) {
-        _LOG_ERROR("SegmentStream::fireOnSegment: Error in onSegment: " <<
+        _LOG_ERROR("SegmentStreamHandler::fireOnSegment: Error in onSegment: " <<
                    ex.what());
       } catch (...) {
-        _LOG_ERROR("SegmentStream::fireOnSegment: Error in onSegment.");
+        _LOG_ERROR("SegmentStreamHandler::fireOnSegment: Error in onSegment.");
       }
     }
   }
