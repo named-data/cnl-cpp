@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil -*- */
 /**
- * Copyright (C) 2017-2018 Regents of the University of California.
+ * Copyright (C) 2018 Regents of the University of California.
  * @author: Jeff Thompson <jefft0@remap.ucla.edu>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
  */
 
 #include <memory.h>
-#include <cnl-cpp/segmented-content.hpp>
+#include <cnl-cpp/segmented-object-handler.hpp>
 
 using namespace std;
 using namespace ndn;
@@ -28,27 +28,24 @@ using namespace ndn::func_lib;
 
 namespace cnl_cpp {
 
-SegmentedContent::Impl::Impl(SegmentStream& segmentStream)
-: segmentStream_(segmentStream), finished_(false), totalSize_(0)
-{
-}
-
-SegmentedContent::Impl::Impl(Namespace& nameSpace)
-: segmentStreamHolder_(ptr_lib::make_shared<SegmentStream>(nameSpace)),
-  segmentStream_(*segmentStreamHolder_), finished_(false), totalSize_(0)
+SegmentedObjectHandler::Impl::Impl
+  (SegmentedObjectHandler& outerHandler,
+   const OnSegmentedObject& onSegmentedObject)
+: outerHandler_(outerHandler), finished_(false), totalSize_(0),
+  onSegmentedObject_(onSegmentedObject)
 {
 }
 
 void
-SegmentedContent::Impl::initialize()
+SegmentedObjectHandler::Impl::initialize()
 {
-  segmentStream_.addOnSegment
-    (bind(&SegmentedContent::Impl::onSegment, shared_from_this(), _1, _2, _3));
+  outerHandler_.addOnSegment
+    (bind(&SegmentedObjectHandler::Impl::onSegment, shared_from_this(), _1, _2, _3));
 }
 
 void
-SegmentedContent::Impl::onSegment
-  (SegmentStream& segmentStream, Namespace* segmentNamespace,
+SegmentedObjectHandler::Impl::onSegment
+  (SegmentStreamHandler& handler, Namespace* segmentNamespace,
    uint64_t callbackId)
 {
   if (finished_)
@@ -60,9 +57,6 @@ SegmentedContent::Impl::onSegment
     totalSize_ += segmentNamespace->getBlobObject().size();
   }
   else {
-      // Finished. We don't need the callback anymore.
-      segmentStream.removeCallback(callbackId);
-
       // Concatenate the segments.
       ptr_lib::shared_ptr<vector<uint8_t> > content =
         ptr_lib::make_shared<vector<uint8_t> >(totalSize_);
@@ -79,11 +73,15 @@ SegmentedContent::Impl::onSegment
       segments_.clear();
       finished_ = true;
 
+      Blob contentBlob = Blob(content, false);
       // Debug: Fix this hack. How can we attach content to a namespace
       // node which has no associated Data packet? Who is authorized to do so?
-      segmentStream_.getNamespace().debugOnContentTransformed
+      outerHandler_.getNamespace().debugOnContentTransformed
         (ptr_lib::make_shared<Data>(), 
-         ptr_lib::make_shared<BlobObject>(Blob(content, false)));
+         ptr_lib::make_shared<BlobObject>(contentBlob));
+
+      if (onSegmentedObject_)
+        onSegmentedObject_(outerHandler_, contentBlob);
   }
 }
 
