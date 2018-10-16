@@ -29,16 +29,16 @@ cnl_cpp_cpp_headers = \
   include/cnl-cpp/object.hpp \
   include/cnl-cpp/nac-consumer-handle.hpp \
   include/cnl-cpp/namespace.hpp \
-  include/cnl-cpp/segment-stream.hpp \
-  include/cnl-cpp/segmented-content.hpp
+  include/cnl-cpp/segment-stream-handler.hpp \
+  include/cnl-cpp/segmented-object-handler.hpp
 
 # C++ code.
 libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
   src/object.cpp \
   src/nac-consumer-handle.cpp \
   src/namespace.cpp \
-  src/segment-stream.cpp \
-  src/segmented-content.cpp
+  src/segment-stream-handler.cpp \
+  src/segmented-object-handler.cpp
 
 bin_test_nac_consumer_SOURCES = examples/test-nac-consumer.cpp
 bin_test_nac_consumer_LDADD = libcnl-cpp.la
