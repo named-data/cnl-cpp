@@ -26,8 +26,9 @@
 INIT_LOGGER("ndn.PendingIncomingInterestTable");
 
 using namespace std;
+using namespace ndn;
 
-namespace ndn {
+namespace cnl_cpp {
 
 PendingIncomingInterestTable::Entry::Entry
   (const ptr_lib::shared_ptr<const Interest>& interest, Face& face)

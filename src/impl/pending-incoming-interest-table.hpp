@@ -24,7 +24,7 @@
 
 #include <ndn-cpp/face.hpp>
 
-namespace ndn {
+namespace cnl_cpp {
 
 /**
  * PendingImcomingInterestTable is an internal class to hold a list of
@@ -47,20 +47,22 @@ public:
      * satisfied later by a new data packet, we will send the Data packet to the
      * face.
      */
-    Entry(const ptr_lib::shared_ptr<const Interest>& interest, Face& face);
+    Entry
+      (const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
+       ndn::Face& face);
 
     /**
      * Get the interest given to the constructor.
      * @return The interest.
      */
-    const ptr_lib::shared_ptr<const Interest>&
+    const ndn::ptr_lib::shared_ptr<const ndn::Interest>&
     getInterest() { return interest_; }
 
     /**
      * Get the face given to the constructor.
      * @return The face.
      */
-    Face&
+    ndn::Face&
     getFace() { return face_; }
 
     /**
@@ -69,16 +71,16 @@ public:
      * @return True if this Interest is timed out, otherwise false.
      */
     bool
-    isTimedOut(MillisecondsSince1970 nowMilliseconds)
+    isTimedOut(ndn::MillisecondsSince1970 nowMilliseconds)
     {
       return timeoutTimeMilliseconds_ >= 0.0 &&
              nowMilliseconds >= timeoutTimeMilliseconds_;
     }
 
   private:
-    ptr_lib::shared_ptr<const Interest> interest_;
-    Face& face_;
-    MillisecondsSince1970 timeoutTimeMilliseconds_;
+    ndn::ptr_lib::shared_ptr<const ndn::Interest> interest_;
+    ndn::Face& face_;
+    ndn::MillisecondsSince1970 timeoutTimeMilliseconds_;
   };
 
   /**
@@ -92,9 +94,11 @@ public:
    * packet.
    */
   void
-  add(const ptr_lib::shared_ptr<const Interest>& interest, Face& face)
+  add
+    (const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
+     ndn::Face& face)
   {
-    table_.push_back(ptr_lib::make_shared<Entry>(interest, face));
+    table_.push_back(ndn::ptr_lib::make_shared<Entry>(interest, face));
   }
 
   /**
@@ -104,10 +108,10 @@ public:
    * @param data The Data packet to send if it satisfies an Interest.
    */
   void
-  satisfyInterests(const Data& data);
+  satisfyInterests(const ndn::Data& data);
 
 private:
-  std::vector<ptr_lib::shared_ptr<Entry> > table_;
+  std::vector<ndn::ptr_lib::shared_ptr<Entry> > table_;
 };
 
 }
