@@ -91,14 +91,6 @@ public:
     (Namespace& nameSpace, Namespace& contentNamespace,
      uint64_t callbackId)> OnContentSet;
 
-  typedef ndn::func_lib::function<void
-    (const ndn::ptr_lib::shared_ptr<ndn::Data>& data,
-     const ndn::ptr_lib::shared_ptr<Object>& object)> OnContentTransformed;
-
-  typedef ndn::func_lib::function<void
-    (const ndn::ptr_lib::shared_ptr<ndn::Data>& data,
-     const OnContentTransformed& onContentTransformed)> TransformContent;
-
   class Impl;
 
   /**
@@ -654,14 +646,6 @@ public:
     deserialize(const ndn::Blob& blob);
 
     /**
-     * Get the TransformContent callback on this or a parent Namespace node.
-     * @return The TransformContent callback, or a default TransformContent() if
-     * not set on this or any parent.
-     */
-    TransformContent
-    getTransformContent();
-
-    /**
      * Create the child with the given name component and add it to this
      * namespace. This private method should only be called if the child does not
      * already exist. The application should use getChild.
@@ -712,21 +696,7 @@ public:
     void
     onDeserialized(const ndn::ptr_lib::shared_ptr<Object>& object);
 
-    /**
-     * Set data_ and object_ to the given values and fire the OnContentSet
-     * callbacks. This may be called from a transformContent_ handler invoked by
-     * setData.
-     * @param data The Data packet object given to setData.
-     * @param object An object of a subclass of Object holding the object
-     * which may have been processed from the Data packet, e.g. by decrypting.
-     */
-public: // Make this public to be called by debugOnContentTransformed.
-    void
-    onContentTransformed
-      (const ndn::ptr_lib::shared_ptr<ndn::Data>& data, 
-       const ndn::ptr_lib::shared_ptr<Object>& object);
 private:
-
     void
     fireOnContentSet(Namespace& contentNamespace);
 
@@ -765,7 +735,6 @@ private:
     std::map<uint64_t, OnObjectNeeded> onObjectNeededCallbacks_;
     // The key is the callback ID. The value is the OnContentSet function.
     std::map<uint64_t, OnContentSet> onContentSetCallbacks_; // Debug: remove
-    TransformContent transformContent_;
     ndn::Interest defaultInterestTemplate_;
     ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
   };
@@ -780,14 +749,6 @@ private:
   // Not using Boost asio multi-threading, so we can use a normal uint64_t.
   static uint64_t lastCallbackId_;
 #endif
-public:
-  void
-  debugOnContentTransformed
-    (const ndn::ptr_lib::shared_ptr<ndn::Data>& data, 
-     const ndn::ptr_lib::shared_ptr<Object>& object)
-  {
-    impl_->onContentTransformed(data, object);
-  }
 };
 
 }

@@ -55,7 +55,7 @@ Namespace::Impl::Impl(Namespace& outerNamespace, const Name& name)
 : outerNamespace_(outerNamespace), name_(name), parent_(0), 
   root_(&outerNamespace), state_(NamespaceState_NAME_EXISTS),
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), face_(0),
-  transformContent_(TransformContent()), maxInterestLifetime_(-1)
+  maxInterestLifetime_(-1)
 {
   defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
 }
@@ -286,19 +286,6 @@ Namespace::Impl::deserialize(const Blob& blob)
   onDeserialized(ptr_lib::make_shared<BlobObject>(blob));
 }
 
-Namespace::TransformContent
-Namespace::Impl::getTransformContent()
-{
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    if (nameSpace->impl_->transformContent_)
-      return nameSpace->impl_->transformContent_;
-    nameSpace = nameSpace->impl_->parent_;
-  }
-
-  return TransformContent();
-}
-
 Namespace&
 Namespace::Impl::createChild(const Name::Component& component, bool fireCallbacks)
 {
@@ -436,24 +423,6 @@ Namespace::Impl::onDeserialized(const ptr_lib::shared_ptr<Object>& object)
 {
   object_ = object;
   setState(NamespaceState_OBJECT_READY);
-}
-
-void
-Namespace::Impl::onContentTransformed
-  (const ptr_lib::shared_ptr<Data>& data,
-   const ptr_lib::shared_ptr<Object>& object)
-{
-  data_ = data;
-  object_ = object;
-
-  setState(NamespaceState_OBJECT_READY);
-
-  // Fire callbacks.
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    nameSpace->impl_->fireOnContentSet(outerNamespace_);
-    nameSpace = nameSpace->impl_->parent_;
-  }
 }
 
 void
