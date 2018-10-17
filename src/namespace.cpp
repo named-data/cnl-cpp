@@ -122,7 +122,7 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
 }
 
 void
-Namespace::Impl::setObject(const ndn::ptr_lib::shared_ptr<Object>& object)
+Namespace::Impl::setObject(const ptr_lib::shared_ptr<Object>& object)
 {
   // Debug: How do we know if we need to serialize/encrypt/sign?
   object_ = object;
@@ -151,14 +151,6 @@ Namespace::Impl::addOnObjectNeeded(const OnObjectNeeded& onObjectNeeded)
 {
   uint64_t callbackId = getNextCallbackId();
   onObjectNeededCallbacks_[callbackId] = onObjectNeeded;
-  return callbackId;
-}
-
-uint64_t
-Namespace::Impl::addOnContentSet(const OnContentSet& onContentSet)
-{
-  uint64_t callbackId = getNextCallbackId();
-  onContentSetCallbacks_[callbackId] = onContentSet;
   return callbackId;
 }
 
@@ -232,7 +224,6 @@ Namespace::Impl::removeCallback(uint64_t callbackId)
 {
   onStateChangedCallbacks_.erase(callbackId);
   onValidateStateChangedCallbacks_.erase(callbackId);
-  onContentSetCallbacks_.erase(callbackId);
 }
 
 Face*
@@ -423,33 +414,6 @@ Namespace::Impl::onDeserialized(const ptr_lib::shared_ptr<Object>& object)
 {
   object_ = object;
   setState(NamespaceState_OBJECT_READY);
-}
-
-void
-Namespace::Impl::fireOnContentSet(Namespace& contentNamespace)
-{
-  // Copy the keys before iterating since callbacks can change the list.
-  vector<uint64_t> keys;
-  keys.reserve(onContentSetCallbacks_.size());
-  for (map<uint64_t, OnContentSet>::iterator i = onContentSetCallbacks_.begin();
-       i != onContentSetCallbacks_.end(); ++i)
-    keys.push_back(i->first);
-
-  for (size_t i = 0; i < keys.size(); ++i) {
-    // A callback on a previous pass may have removed this callback, so check.
-    map<uint64_t, OnContentSet>::iterator entry =
-      onContentSetCallbacks_.find(keys[i]);
-    if (entry != onContentSetCallbacks_.end()) {
-      try {
-        entry->second(outerNamespace_, contentNamespace, entry->first);
-      } catch (const std::exception& ex) {
-        _LOG_ERROR("Namespace::fireOnContentSet: Error in onContentSet: " <<
-                   ex.what());
-      } catch (...) {
-        _LOG_ERROR("Namespace::fireOnContentSet: Error in onContentSet.");
-      }
-    }
-  }
 }
 
 void

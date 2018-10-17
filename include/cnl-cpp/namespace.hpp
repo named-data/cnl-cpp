@@ -87,10 +87,6 @@ public:
     (Namespace& nameSpace, Namespace& neededNamespace,
      uint64_t callbackId)> OnObjectNeeded;
 
-  typedef ndn::func_lib::function<void
-    (Namespace& nameSpace, Namespace& contentNamespace,
-     uint64_t callbackId)> OnContentSet;
-
   class Impl;
 
   /**
@@ -404,28 +400,6 @@ public:
   }
 
   /**
-   * Add an OnContentSet callback. When the content has been set for this
-   * Namespace node or any children, this calls onContentSet as described below.
-   * @param onContentSet This calls
-   * onContentSet(nameSpace, contentNamespace, callbackId)
-   * where nameSpace is this Namespace, contentNamespace is the Namespace where
-   * the content was set, and callbackId is the callback ID returned by this
-   * method. If you only care if the content has been set for this Namespace
-   * (and not any of its children) then your callback can check
-   * "if contentNamespace == nameSpace". To get the content or data packet, use
-   * contentNamespace.getContent() or contentNamespace.getData().
-   * NOTE: The library will log any exceptions thrown by this callback, but for
-   * better error handling the callback should catch and properly handle any
-   * exceptions.
-   * @return The callback ID which you can use in removeCallback().
-   */
-  uint64_t
-  addOnContentSet(const OnContentSet& onContentSet)
-  {
-    return impl_->addOnContentSet(onContentSet);
-  }
-
-  /**
    * Set the Face used when expressInterest is called on this or child nodes
    * (unless a child node has a different Face).
    * TODO: Replace this by a mechanism for requesting a Data object which is
@@ -593,9 +567,6 @@ public:
     uint64_t
     addOnObjectNeeded(const OnObjectNeeded& onObjectNeeded);
 
-    uint64_t
-    addOnContentSet(const OnContentSet& onContentSet);
-
     void
     setFace(ndn::Face* face) { face_ = face; }
 
@@ -698,9 +669,6 @@ public:
 
 private:
     void
-    fireOnContentSet(Namespace& contentNamespace);
-
-    void
     onData(const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
            const ndn::ptr_lib::shared_ptr<ndn::Data>& data);
 
@@ -733,8 +701,6 @@ private:
     std::map<uint64_t, OnValidateStateChanged> onValidateStateChangedCallbacks_;
     // The key is the callback ID. The value is the OnObjectNeeded function.
     std::map<uint64_t, OnObjectNeeded> onObjectNeededCallbacks_;
-    // The key is the callback ID. The value is the OnContentSet function.
-    std::map<uint64_t, OnContentSet> onContentSetCallbacks_; // Debug: remove
     ndn::Interest defaultInterestTemplate_;
     ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
   };
