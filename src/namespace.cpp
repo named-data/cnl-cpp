@@ -33,7 +33,8 @@ namespace cnl_cpp {
 
 bool
 Namespace::Handler::canDeserialize
-  (Namespace& objectNamespace, ndn::Blob blob, OnDeserialized onDeserialized)
+  (Namespace& objectNamespace, const Blob& blob,
+   const OnDeserialized& onDeserialized)
 {
   return false;
 }
@@ -112,15 +113,12 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
     throw runtime_error
       ("The Data packet name does not equal the name of this Namespace node");
 
-  TransformContent transformContent = getTransformContent();
-  // TODO: TransformContent should take an OnError.
-  if (transformContent)
-    transformContent
-      (data, bind(&Namespace::Impl::onContentTransformed, shared_from_this(), _1, _2));
-  else
-    // Otherwise just invoke directly.
-    onContentTransformed
-      (data, ptr_lib::make_shared<BlobObject>(data->getContent()));
+  data_ = data;
+  setState(NamespaceState_DATA_RECEIVED);
+
+  // TODO: This is presumably called by the application in the producer pipeline
+  // (who may have already serialized and encrypted), but should we decrypt and
+  // deserialize?
 }
 
 uint64_t
@@ -141,6 +139,14 @@ Namespace::Impl::addOnValidateStateChanged
 }
 
 uint64_t
+Namespace::Impl::addOnObjectNeeded(const OnObjectNeeded& onObjectNeeded)
+{
+  uint64_t callbackId = getNextCallbackId();
+  onObjectNeededCallbacks_[callbackId] = onObjectNeeded;
+  return callbackId;
+}
+
+uint64_t
 Namespace::Impl::addOnContentSet(const OnContentSet& onContentSet)
 {
   uint64_t callbackId = getNextCallbackId();
@@ -149,7 +155,7 @@ Namespace::Impl::addOnContentSet(const OnContentSet& onContentSet)
 }
 
 Namespace&
-Namespace::Impl::setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler)
+Namespace::Impl::setHandler(const ptr_lib::shared_ptr<Handler>& handler)
 {
   if (handler_)
     // TODO: Should we try to chain handlers?
@@ -163,6 +169,32 @@ Namespace::Impl::setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler)
   handler->onNamespaceSet();
   handler_ = handler;
   return outerNamespace_;
+}
+
+void
+Namespace::Impl::objectNeeded()
+{
+  // Debug: Check if we already have the object. (But maybe not the data_?)
+
+  // Ask all OnObjectNeeded callbacks if they can produce.
+  bool canProduce = false;
+  Namespace* nameSpace = &outerNamespace_;
+  while (nameSpace) {
+    if (nameSpace->impl_->fireOnObjectNeeded(outerNamespace_))
+      canProduce = true;
+    nameSpace = nameSpace->impl_->parent_;
+  }
+
+  // Debug: Check if the object has been set (even if onObjectNeeded returned false.)
+
+  if (canProduce) {
+    // Assume that the application will produce the object.
+    setState(NamespaceState_PRODUCING_OBJECT);
+    return;
+  }
+
+  // Debug: Need an Interest template?
+  expressInterest(0);
 }
 
 void
@@ -182,7 +214,9 @@ Namespace::Impl::expressInterest(const Interest *interestTemplate)
      bind(&Namespace::Impl::onData, shared_from_this(), _1, _2),
      ExponentialReExpress::makeOnTimeout
        (face, bind(&Namespace::Impl::onData, shared_from_this(), _1, _2),
-        OnTimeout(), getMaxInterestLifetime()));
+        bind(&Namespace::Impl::onTimeout, shared_from_this(), _1),
+        getMaxInterestLifetime()),
+     bind(&Namespace::Impl::onNetworkNack, shared_from_this(), _1, _2));
 }
 
 void
@@ -206,7 +240,7 @@ Namespace::Impl::getFace()
   return 0;
 }
 
-ndn::Milliseconds
+Milliseconds
 Namespace::Impl::getMaxInterestLifetime()
 {
   Namespace* nameSpace = &outerNamespace_;
@@ -218,6 +252,30 @@ Namespace::Impl::getMaxInterestLifetime()
 
   // Return the default.
   return 16000.0;
+}
+
+void
+Namespace::Impl::deserialize(const Blob& blob)
+{
+  Namespace* nameSpace = &outerNamespace_;
+  while (nameSpace) {
+    if (nameSpace->impl_->handler_) {
+      if (nameSpace->impl_->handler_->canDeserialize
+          (outerNamespace_, blob,
+           bind(&Namespace::Impl::onDeserialized, shared_from_this(), _1))) {
+        // Wait for the Handler to set the object.
+        setState(NamespaceState_DESERIALIZING);
+        return;
+      }
+    }
+
+    nameSpace = nameSpace->impl_->parent_;
+  }
+
+  // Debug: Check if the object has been set (even if canDeserialize returned false.)
+
+  // Call the default onDeserialized immediately.
+  onDeserialized(ptr_lib::make_shared<BlobObject>(blob));
 }
 
 Namespace::TransformContent
@@ -334,10 +392,48 @@ Namespace::Impl::fireOnValidateStateChanged
   }
 }
 
+bool
+Namespace::Impl::fireOnObjectNeeded(Namespace& neededNamespace)
+{
+  // Copy the keys before iterating since callbacks can change the list.
+  vector<uint64_t> keys;
+  keys.reserve(onObjectNeededCallbacks_.size());
+  for (map<uint64_t, OnObjectNeeded>::iterator i = onObjectNeededCallbacks_.begin();
+       i != onObjectNeededCallbacks_.end(); ++i)
+    keys.push_back(i->first);
+
+  bool canProduce = false;
+  for (size_t i = 0; i < keys.size(); ++i) {
+    // A callback on a previous pass may have removed this callback, so check.
+    map<uint64_t, OnObjectNeeded>::iterator entry =
+      onObjectNeededCallbacks_.find(keys[i]);
+    if (entry != onObjectNeededCallbacks_.end()) {
+      try {
+        if (entry->second(outerNamespace_, neededNamespace, entry->first))
+          canProduce = true;
+      } catch (const std::exception& ex) {
+        _LOG_ERROR("Namespace::fireOnObjectNeeded: Error in onObjectNeeded: " <<
+                   ex.what());
+      } catch (...) {
+        _LOG_ERROR("Namespace::fireOnObjectNeeded: Error in onObjectNeeded.");
+      }
+    }
+  }
+
+  return canProduce;
+}
+
+void
+Namespace::Impl::onDeserialized(const ptr_lib::shared_ptr<Object>& object)
+{
+  object_ = object;
+  setState(NamespaceState_OBJECT_READY);
+}
+
 void
 Namespace::Impl::onContentTransformed
-  (const ptr_lib::shared_ptr<Data>& data, 
-   const ndn::ptr_lib::shared_ptr<Object>& object)
+  (const ptr_lib::shared_ptr<Data>& data,
+   const ptr_lib::shared_ptr<Object>& object)
 {
   data_ = data;
   object_ = object;
@@ -385,10 +481,32 @@ Namespace::Impl::onData
    const ptr_lib::shared_ptr<Data>& data)
 {
   Namespace& dataNamespace = getChild(data->getName());
+  // setData will set the state to DATA_RECEIVED.
   dataNamespace.setData(data);
 
   // TODO: Start the validator.
   dataNamespace.impl_->setValidateState(NamespaceValidateState_VALIDATING);
+
+  // TODO: Decrypt.
+
+  dataNamespace.impl_->deserialize(data->getContent());
+}
+
+void
+Namespace::Impl::onTimeout(const ptr_lib::shared_ptr<const Interest>& interest)
+{
+  // TODO: Need to detect a timeout on a child node.
+  setState(NamespaceState_INTEREST_TIMEOUT);
+}
+
+void
+Namespace::Impl::onNetworkNack
+  (const ptr_lib::shared_ptr<const Interest>& interest,
+   const ptr_lib::shared_ptr<NetworkNack>& networkNack)
+{
+  // TODO: Need to detect a network nack on a child node.
+  networkNack_ = networkNack;
+  setState(NamespaceState_INTEREST_NETWORK_NACK);
 }
 
 #ifdef NDN_CPP_HAVE_BOOST_ASIO

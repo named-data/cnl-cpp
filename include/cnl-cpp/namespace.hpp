@@ -83,6 +83,10 @@ public:
   typedef ndn::func_lib::function<void
     (const ndn::ptr_lib::shared_ptr<Object>& object)> OnDeserialized;
 
+  typedef ndn::func_lib::function<bool
+    (Namespace& nameSpace, Namespace& neededNamespace,
+     uint64_t callbackId)> OnObjectNeeded;
+
   typedef ndn::func_lib::function<void
     (Namespace& nameSpace, Namespace& contentNamespace,
      uint64_t callbackId)> OnContentSet;
@@ -131,7 +135,8 @@ public:
      */
     virtual bool
     canDeserialize
-      (Namespace& objectNamespace, ndn::Blob blob, OnDeserialized onDeserialized);
+      (Namespace& objectNamespace, const ndn::Blob& blob,
+       const OnDeserialized& onDeserialized);
 
   protected:
     /**
@@ -192,6 +197,14 @@ public:
    */
   NamespaceState
   getState() { return impl_->getState(); }
+
+  /**
+   * Get the NetworkNack for when the state is set to
+   * NamespaceState_INTEREST_NETWORK_NACK .
+   * @return The NetworkNack, or null if one wasn't received.
+   */
+  ndn::ptr_lib::shared_ptr<ndn::NetworkNack>
+  getNetworkNack() { return impl_->getNetworkNack(); }
 
   /**
    * Get the validate state of this Namespace node. When a Namespace node is
@@ -262,8 +275,9 @@ public:
   getChildComponents() { return impl_->getChildComponents(); }
 
   /**
-   * Attach the Data packet to this Namespace. This calls callbacks as described
-   * by addOnContentSet. If a Data packet is already attached, do nothing.
+   * Attach the Data packet to this Namespace. This sets the state to
+   * DATA_RECEIVED and calls callbacks as described by addOnStateChanged.
+   * However, if a Data packet is already attached, do nothing.
    * @param data The Data packet object whose name must equal the name in this
    * Namespace node. To get the right Namespace, you can use
    * getChild(data.getName()). For efficiency, this does not copy the Data
@@ -368,6 +382,30 @@ public:
   }
 
   /**
+   * Add an onObjectNeeded callback. The objectNeeded() method calls all the
+   * onObjectNeeded callback on that Namespace node and all the parents, as
+   * described below.
+   * @param onObjectNeeded This calls
+   * onObjectNeeded(namespace, neededNamespace, callbackId) where namespace is
+   * this Namespace, neededNamespace is the Namespace (possibly a child) whose
+   * objectNeeded was called, and callbackId is the callback ID returned by this
+   * method. If the owner of the callback (the application or a Handler) can
+   * produce the object for the neededNamespace, then the callback should return
+   * true and the owner should produce the object (either during the callback or
+   * at a later time) and call neededNamespace.setObject(). If the owner cannot
+   * produce the object then the callback should return false.
+   * NOTE: The library will log any exceptions thrown by this callback, but for
+   * better error handling the callback should catch and properly handle any
+   * exceptions.
+   * @return The callback ID which you can use in removeCallback().
+   */
+  uint64_t
+  addOnObjectNeeded(const OnObjectNeeded& onObjectNeeded)
+  {
+    return impl_->addOnObjectNeeded(onObjectNeeded);
+  }
+
+  /**
    * Add an OnContentSet callback. When the content has been set for this
    * Namespace node or any children, this calls onContentSet as described below.
    * @param onContentSet This calls
@@ -406,6 +444,9 @@ public:
     return impl_->setHandler(handler);
   }
 
+  void
+  objectNeeded() { impl_->objectNeeded(); }
+
   /**
    * Set the maximum lifetime for re-expressed interests to be used when this or
    * a child node calls expressInterest. You can call this on a child node to
@@ -422,10 +463,14 @@ public:
   /**
    * Call expressInterest on this (or a parent's) Face where the interest name
    * is the name of this Namespace node. When the Data packet is received this
-   * calls setData, so you should use a callback with addOnContentSet. This uses
-   * ExponentialReExpress to re-express a timed-out interest with longer
-   * lifetimes, with a maximum determined by setMaxInterestLifetime().
-   * TODO: How to alert the application on a final interest timeout?
+   * calls setData, so you should use a callback with addOnStateChanged. This
+   * uses ExponentialReExpress to re-express a timed-out interest with longer
+   * lifetimes, with a maximum determined by setMaxInterestLifetime(). If the
+   * Interest times out, this sets the state to NamespaceState_INTEREST_TIMEOUT
+   * and calls the OnStateChanged callbacks. If this receives a network Nack,
+   * this stores the NetworkNack object which you can access with
+   * getNetworkNack(), sets the state to NamespaceState_INTEREST_NETWORK_NACK,
+   * and calls the OnStateChanged callbacks.
    * TODO: Replace this by a mechanism for requesting a Data object which is
    * more general than a Face network operation.
    * @param interestTemplate (optional) The interest template for
@@ -496,6 +541,9 @@ public:
     NamespaceState
     getState() { return state_; }
 
+    ndn::ptr_lib::shared_ptr<ndn::NetworkNack>
+    getNetworkNack() { return networkNack_; }
+
     NamespaceValidateState
     getValidateState() { return validateState_; }
 
@@ -542,6 +590,9 @@ public:
       (const OnValidateStateChanged& onValidateStateChanged);
 
     uint64_t
+    addOnObjectNeeded(const OnObjectNeeded& onObjectNeeded);
+
+    uint64_t
     addOnContentSet(const OnContentSet& onContentSet);
 
     void
@@ -549,6 +600,9 @@ public:
 
     Namespace&
     setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler);
+
+    void
+    objectNeeded();
 
     void
     setMaxInterestLifetime(ndn::Milliseconds maxInterestLifetime)
@@ -579,6 +633,16 @@ public:
      */
     ndn::Milliseconds
     getMaxInterestLifetime();
+
+    /**
+     * If canDeserialize on the Handler of this or a parent Namespace node
+     * returns true, set the state to DESERIALIZING and wait for the Handler to
+     * set the object. Otherwise, just all the default onDeserialized
+     * immediately, which sets the state to OBJECT_READY.
+     * @param blob The Blob to deserialize.
+     */
+    void
+    deserialize(const ndn::Blob& blob);
 
     /**
      * Get the TransformContent callback on this or a parent Namespace node.
@@ -627,6 +691,18 @@ public:
     fireOnValidateStateChanged
       (Namespace& changedNamespace, NamespaceValidateState validateState);
 
+    bool
+    fireOnObjectNeeded(Namespace& neededNamespace);
+
+    /**
+     * Set object_ to the given value, set the state to OBJECT_READY, and fire
+     * the OnStateChanged callbacks. This may be called from canDeserialize in a
+     * handler.
+     * @param object The deserialized object.
+     */
+    void
+    onDeserialized(const ndn::ptr_lib::shared_ptr<Object>& object);
+
     /**
      * Set data_ and object_ to the given values and fire the OnContentSet
      * callbacks. This may be called from a transformContent_ handler invoked by
@@ -649,6 +725,14 @@ private:
     onData(const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
            const ndn::ptr_lib::shared_ptr<ndn::Data>& data);
 
+    void
+    onTimeout(const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest);
+
+    void
+    onNetworkNack
+      (const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
+       const ndn::ptr_lib::shared_ptr<ndn::NetworkNack>& networkNack);
+
     Namespace& outerNamespace_;
     ndn::Name name_;
     // parent_ and root_ may be updated by createChild.
@@ -657,6 +741,7 @@ private:
     // The key is a Name::Component. The value is the child Namespace.
     std::map<ndn::Name::Component, ndn::ptr_lib::shared_ptr<Namespace>> children_;
     NamespaceState state_;
+    ndn::ptr_lib::shared_ptr<ndn::NetworkNack> networkNack_;
     NamespaceValidateState validateState_;
     ndn::ptr_lib::shared_ptr<ndn::ValidationError> validationError_;
     ndn::ptr_lib::shared_ptr<ndn::Data> data_;
@@ -667,6 +752,8 @@ private:
     std::map<uint64_t, OnStateChanged> onStateChangedCallbacks_;
     // The key is the callback ID. The value is the OnValidateStateChanged function.
     std::map<uint64_t, OnValidateStateChanged> onValidateStateChangedCallbacks_;
+    // The key is the callback ID. The value is the OnObjectNeeded function.
+    std::map<uint64_t, OnObjectNeeded> onObjectNeededCallbacks_;
     // The key is the callback ID. The value is the OnContentSet function.
     std::map<uint64_t, OnContentSet> onContentSetCallbacks_; // Debug: remove
     TransformContent transformContent_;
