@@ -74,11 +74,8 @@ SegmentedObjectHandler::Impl::onSegment
       finished_ = true;
 
       Blob contentBlob = Blob(content, false);
-      // Debug: Fix this hack. How can we attach content to a namespace
-      // node which has no associated Data packet? Who is authorized to do so?
-      outerHandler_.getNamespace().debugOnContentTransformed
-        (ptr_lib::make_shared<Data>(), 
-         ptr_lib::make_shared<BlobObject>(contentBlob));
+      outerHandler_.getNamespace().setObject
+         (ptr_lib::make_shared<BlobObject>(contentBlob));
 
       if (onSegmentedObject_)
         onSegmentedObject_(outerHandler_, contentBlob);
