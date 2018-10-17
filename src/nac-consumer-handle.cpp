@@ -41,43 +41,42 @@ NacConsumerHandler::Impl::initialize
   (Namespace& nameSpace, KeyChain* keyChain, const Name& groupName,
    const Name& consumerName, const ptr_lib::shared_ptr<ConsumerDb>& database)
 {
+  if (!keyChain)
+    // This is being called as a private constructor.
+    return;
+
   // TODO: What is the right way to get access to the Face?
   Face* face = nameSpace.impl_->getFace();
   consumer_ = ptr_lib::make_shared<Consumer>
     (face, keyChain, groupName, consumerName, database);
 
-  // TODO: Use a way to set the callback which is better than setting the member.
-  nameSpace.impl_->transformContent_ = bind
-    (&NacConsumerHandler::Impl::transformContent, shared_from_this(), _1, _2);
+  nameSpace.addOnStateChanged
+    (bind(&NacConsumerHandler::Impl::onStateChanged, shared_from_this(), _1, _2, _3, _4));
 }
 
-void
-NacConsumerHandler::Impl::transformContent
-  (const ptr_lib::shared_ptr<Data>& data,
-   const Namespace::OnContentTransformed& onContentTransformed)
+bool
+NacConsumerHandler::Impl::canDeserialize
+  (Namespace& objectNamespace, const Blob& blob,
+   const Namespace::OnDeserialized& onDeserialized)
 {
-  // TODO: Use Namespace mechanisms to verify the Data packet.
-
   // Prepare the callbacks. We make a shared_ptr object since it needs to
   // exist after we call expressInterest and return.
   class Callbacks : public ptr_lib::enable_shared_from_this<Callbacks> {
   public:
     Callbacks
-      (NacConsumerHandler::Impl* parent,
-       const ptr_lib::shared_ptr<Data>& data,
-       const Namespace::OnContentTransformed& onContentTransformed)
-    : parent_(parent), data_(data), onContentTransformed_(onContentTransformed)
+      (const Namespace::OnDeserialized& onDeserialized)
+    : onDeserialized_(onDeserialized)
     {}
 
     void
     onPlainText(const Blob& plainText)
     {
       try {
-        onContentTransformed_(data_, ptr_lib::make_shared<BlobObject>(plainText));
+        onDeserialized_(ptr_lib::make_shared<BlobObject>(plainText));
       } catch (const std::exception& ex) {
-        _LOG_ERROR("Error in onContentTransformed: " << ex.what());
+        _LOG_ERROR("Error in onDeserialized: " << ex.what());
       } catch (...) {
-        _LOG_ERROR("Error in onContentTransformed.");
+        _LOG_ERROR("Error in onDeserialized.");
       }
     }
 
@@ -87,16 +86,34 @@ NacConsumerHandler::Impl::transformContent
       _LOG_ERROR("consume error " << errorCode << " " << message);
     }
 
-    NacConsumerHandler::Impl* parent_;
-    ptr_lib::shared_ptr<Data> data_;
-    Namespace::OnContentTransformed onContentTransformed_;
+    Namespace::OnDeserialized onDeserialized_;
   };
 
+  Data tempData;
+  tempData.setContent(blob);
   ptr_lib::shared_ptr<Callbacks> callbacks = ptr_lib::make_shared<Callbacks>
-    (this, data, onContentTransformed);
+    (onDeserialized);
   consumer_->decryptContent
-    (*data, bind(&Callbacks::onPlainText, callbacks, _1),
+    (tempData, bind(&Callbacks::onPlainText, callbacks, _1),
      bind(&Callbacks::onError, callbacks, _1, _2));
+
+  return true;
+}
+
+void
+NacConsumerHandler::Impl::onStateChanged
+  (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
+   uint64_t callbackId)
+{
+ if (state == NamespaceState_NAME_EXISTS &&
+     changedNamespace.getName().size() == nameSpace.getName().size() + 1) {
+    // Attach a NacConsumerHandler with the same _consumer.
+    ptr_lib::shared_ptr<NacConsumerHandler> childHandler
+      (new NacConsumerHandler
+       (nameSpace, 0, Name(), Name(), ptr_lib::shared_ptr<ConsumerDb>()));
+    childHandler->impl_->consumer_ = consumer_;
+    changedNamespace.setHandler(childHandler);
+ }
 }
 
 }

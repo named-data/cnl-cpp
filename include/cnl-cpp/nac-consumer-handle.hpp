@@ -31,7 +31,7 @@ namespace cnl_cpp {
  * A NacConsumerHandler uses a Name-based Access Control Consumer to
  * automatically decrypt Data packets which are attached to a Namespace node.
  */
-class NacConsumerHandler {
+class NacConsumerHandler : public Namespace::Handler {
 public:
   /**
    * Create a NacConsumerHandler object to attach to the given Namespace. This
@@ -72,6 +72,14 @@ public:
     impl_->addDecryptionKey(keyName, keyBlob);
   }
 
+  virtual bool
+  canDeserialize
+    (Namespace& objectNamespace, const ndn::Blob& blob,
+     const Namespace::OnDeserialized& onDeserialized)
+  {
+    return impl_->canDeserialize(objectNamespace, blob, onDeserialized);
+  }
+
 private:
   /**
    * NacConsumerHandler::Impl does the work of NacConsumerHandler. It is a
@@ -105,19 +113,16 @@ private:
       consumer_->addDecryptionKey(keyName, keyBlob);
     }
 
+    bool
+    canDeserialize
+      (Namespace& objectNamespace, const ndn::Blob& blob,
+       const Namespace::OnDeserialized& onDeserialized);
+
   private:
-    /**
-     * This is the TransformContent callback to use the Consumer to decrypt data
-     * and call onContentTransformed as described below.
-     * @param data The Data packet with the content to decrypt.
-     * @param onContentTransformed This calls
-     * onContentTransformed(data, plainText) where data is the given Data, and
-     * plainText is the decrypted content Blob.
-     */
     void
-    transformContent
-      (const ndn::ptr_lib::shared_ptr<ndn::Data>& data,
-       const Namespace::OnContentTransformed& onContentTransformed);
+    onStateChanged
+      (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
+       uint64_t callbackId);
 
     NacConsumerHandler& outerNacConsumerHandler_;
     ndn::ptr_lib::shared_ptr<ndn::Consumer> consumer_;
