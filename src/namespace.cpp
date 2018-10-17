@@ -121,6 +121,14 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
   // deserialize?
 }
 
+void
+Namespace::Impl::setObject(const ndn::ptr_lib::shared_ptr<Object>& object)
+{
+  // Debug: How do we know if we need to serialize/encrypt/sign?
+  object_ = object;
+  setState(NamespaceState_OBJECT_READY);
+}
+
 uint64_t
 Namespace::Impl::addOnStateChanged(const OnStateChanged& onStateChanged)
 {

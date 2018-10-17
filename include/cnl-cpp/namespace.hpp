@@ -305,6 +305,12 @@ public:
   const ndn::ptr_lib::shared_ptr<ndn::Data>&
   getData() { return impl_->getData(); }
 
+  void
+  setObject(const ndn::ptr_lib::shared_ptr<Object>& object)
+  {
+    impl_->setObject(object);
+  }
+
   /**
    * Get the deserialized object attached to this Namespace object. Note that
    * getObject() may be different than the content in the attached Data packet
@@ -578,6 +584,9 @@ public:
 
     const ndn::ptr_lib::shared_ptr<ndn::Data>&
     getData() { return data_; }
+
+    void
+    setObject(const ndn::ptr_lib::shared_ptr<Object>& object);
 
     const ndn::ptr_lib::shared_ptr<Object>&
     getObject() { return object_; }
