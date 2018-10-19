@@ -32,10 +32,12 @@
 #include <ndn-cpp/security/policy/no-verify-policy-manager.hpp>
 #include <ndn-cpp/encrypt/algo/rsa-algorithm.hpp>
 #include <ndn-cpp/encrypt/algo/encryptor.hpp>
+#include <cnl-cpp/namespace.hpp>
 
 using namespace std;
 using namespace ndn;
 using namespace ndn::func_lib;
+using namespace cnl_cpp;
 
 static uint8_t DATA0_CONTENT[] = {
   // "This test message was decrypted"
@@ -204,115 +206,114 @@ createKeyChain()
   return keyChain;
 }
 
+/**
+ * Create the encrypted C-KEY and D-KEY, and add to the Namespace object.
+ * @return The C-KEY for encrypting the content.
+ */
+Blob
+prepareData
+  (Namespace& nameSpace, const Name& userKeyName, const Name& cKeyName,
+   KeyChain& keyChain)
+{
+  // Imitate test-consumer from the NDN-CPP integration tests.
+  Name dKeyName = Name("/Prefix/READ/D-KEY/1/2");
+
+  // Generate the E-KEY and D-KEY.
+  RsaKeyParams params;
+  Blob fixtureDKeyBlob = RsaAlgorithm::generateKey(params).getKeyBits();
+  Blob fixtureEKeyBlob = RsaAlgorithm::deriveEncryptKey
+    (fixtureDKeyBlob).getKeyBits();
+
+  // The user key.
+  Blob fixtureUserEKeyBlob(FIXTURE_USER_E_KEY, sizeof(FIXTURE_USER_E_KEY));
+
+  // Load the C-KEY.
+  Blob fixtureCKeyBlob(AES_KEY, sizeof(AES_KEY));
+
+  // Imitate createEncryptedCKey.
+  ptr_lib::shared_ptr<Data> cKeyData = ptr_lib::make_shared<Data>(cKeyName);
+  EncryptParams encryptParams(ndn_EncryptAlgorithmType_RsaOaep);
+  Encryptor::encryptData
+    (*cKeyData, fixtureCKeyBlob, dKeyName, fixtureEKeyBlob, encryptParams);
+  keyChain.sign(*cKeyData);
+  nameSpace[cKeyData->getName()].setData(cKeyData);
+
+  // Imitate createEncryptedDKey.
+  ptr_lib::shared_ptr<Data> dKeyData = ptr_lib::make_shared<Data>(dKeyName);
+  encryptParams = EncryptParams(ndn_EncryptAlgorithmType_RsaOaep);
+  Encryptor::encryptData
+    (*dKeyData, fixtureDKeyBlob, userKeyName, fixtureUserEKeyBlob,
+     encryptParams);
+  keyChain.sign(*dKeyData);
+  nameSpace[dKeyData->getName()].setData(dKeyData);
+
+  return fixtureCKeyBlob;
+}
+
 class TestProducer {
 public:
   /**
-   * Create a TestProducer with an OnInterestCallback for use with
-   * registerPrefix to answer interests with prepared packets. When finished, a
-   * callback will set enabled_ to false.
+   * Create a TestProducer with an onObjectNeeded callback to produce the
+   * encrypted segments.
    */
   TestProducer
-    (const Name& contentPrefix, const Name& userKeyName, KeyChain& keyChain)
+    (const Name& contentPrefix, const Name& cKeyName, const Blob& cKeyBlob,
+     KeyChain& keyChain)
+  : contentPrefix_(contentPrefix), cKeyName_(cKeyName), cKeyBlob_(cKeyBlob),
+    keyChain_(keyChain)
   {
-    enabled_ = true;
-    responseCount_ = 0;
-
-    // Imitate test-consumer from the NDN-CPP integration tests.
-    Name contentName0 = Name(contentPrefix).append("Content").appendSegment(0);
-    Name contentName1 = Name(contentPrefix).append("Content").appendSegment(1);
-    Name cKeyName = Name("/Prefix/SAMPLE/Content/C-KEY/1");
-    Name dKeyName = Name("/Prefix/READ/D-KEY/1/2");
-
-    // Generate the E-KEY and D-KEY.
-    RsaKeyParams params;
-    Blob fixtureDKeyBlob = RsaAlgorithm::generateKey(params).getKeyBits();
-    Blob fixtureEKeyBlob = RsaAlgorithm::deriveEncryptKey
-      (fixtureDKeyBlob).getKeyBits();
-
-    // The user key.
-    Blob fixtureUserEKeyBlob(FIXTURE_USER_E_KEY, sizeof(FIXTURE_USER_E_KEY));
-
-    // Load the C-KEY.
-    Blob fixtureCKeyBlob(AES_KEY, sizeof(AES_KEY));
-
-    // Imitate createEncryptedContent. Make two segments.
-    EncryptParams encryptParams(ndn_EncryptAlgorithmType_AesCbc);
-    encryptParams.setInitialVector(Blob(INITIAL_VECTOR, sizeof(INITIAL_VECTOR)));
-    contentData0_.reset(new Data(contentName0));
-    Encryptor::encryptData
-      (*contentData0_, Blob(DATA0_CONTENT, sizeof(DATA0_CONTENT)), cKeyName,
-      fixtureCKeyBlob,  encryptParams);
-    contentData0_->getMetaInfo().setFinalBlockId(Name().appendSegment(1)[0]);
-    keyChain.sign(*contentData0_);
-
-    contentData1_.reset(new Data(contentName1));
-    Encryptor::encryptData
-      (*contentData1_, Blob(DATA1_CONTENT, sizeof(DATA1_CONTENT)), cKeyName,
-      fixtureCKeyBlob,  encryptParams);
-    contentData1_->getMetaInfo().setFinalBlockId(Name().appendSegment(1)[0]);
-    keyChain.sign(*contentData1_);
-
-    // Imitate createEncryptedCKey.
-    cKeyData_.reset(new Data(cKeyName));
-    encryptParams = EncryptParams(ndn_EncryptAlgorithmType_RsaOaep);
-    Encryptor::encryptData
-      (*cKeyData_, fixtureCKeyBlob, dKeyName, fixtureEKeyBlob, encryptParams);
-    keyChain.sign(*cKeyData_);
-
-    // Imitate createEncryptedDKey.
-    dKeyData_.reset(new Data(dKeyName));
-    encryptParams = EncryptParams(ndn_EncryptAlgorithmType_RsaOaep);
-    Encryptor::encryptData
-      (*dKeyData_, fixtureDKeyBlob, userKeyName, fixtureUserEKeyBlob,
-       encryptParams);
-    keyChain.sign(*dKeyData_);
   }
 
   bool
-  getEnabled() { return enabled_; }
-
-  void
-  onInterest
-     (const ptr_lib::shared_ptr<const Name>& prefix,
-      const ptr_lib::shared_ptr<const Interest>& interest, Face& face,
-      uint64_t interestFilterId,
-      const ptr_lib::shared_ptr<const InterestFilter>& filter)
+  onObjectNeeded
+     (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId)
   {
-    Data* data;
-    if (interest->matchesName(contentData0_->getName()))
-      data = contentData0_.get();
-    else if (interest->matchesName(cKeyData_->getName()))
-      data = cKeyData_.get();
-    else if (interest->matchesName(contentData1_->getName()))
-      data = contentData1_.get();
-    else if (interest->matchesName(dKeyData_->getName()))
-      data = dKeyData_.get();
+    if (!(neededNamespace.getName().size() == contentPrefix_.size() + 1 &&
+          contentPrefix_.isPrefixOf(neededNamespace.getName()) &&
+          neededNamespace.getName()[contentPrefix_.size()].isSegment()))
+        // Not a content segment, ignore.
+        return false;
+
+    // Get the segment number.
+    uint64_t segment = neededNamespace.getName()[contentPrefix_.size()].toSegment();
+    if (!(segment >= 0 && segment <= 1))
+      // An invalid segment was requested.
+      return false;
+
+    // Make the Data packet for the segment. Imitate createEncryptedContent.
+    Blob segmentContent;
+    if (segment == 0)
+      segmentContent = Blob(DATA0_CONTENT, sizeof(DATA0_CONTENT));
     else
-      return;
+      segmentContent = Blob(DATA1_CONTENT, sizeof(DATA1_CONTENT));
+    EncryptParams encryptParams(ndn_EncryptAlgorithmType_AesCbc);
+    encryptParams.setInitialVector(Blob(INITIAL_VECTOR, sizeof(INITIAL_VECTOR)));
+    ptr_lib::shared_ptr<Data> data = ptr_lib::make_shared<Data>
+      (Name(contentPrefix_).appendSegment(segment));
 
-    cout << "Sending Data packet " << data->getName().toUri() << endl;
-    face.putData(*data);
+    Encryptor::encryptData
+      (*data, segmentContent, cKeyName_, cKeyBlob_,  encryptParams);
+    data->getMetaInfo().setFinalBlockId(Name().appendSegment(1)[0]);
+    keyChain_.sign(*data);
 
-    ++responseCount_;
-    if (responseCount_ >= 4)
-        // We sent all the packets.
-        enabled_ = false;
+    // Now call setData which will answer the pending incoming Interest.
+    // Note that the encrypted name has extra child components for the C-KEY.
+    cout << "Produced data " << data->getName() << endl;
+    neededNamespace[data->getName()].setData(data);
+    return true;
   }
 
   void
   onRegisterFailed(const ptr_lib::shared_ptr<const Name>& prefix)
   {
     cout << "Register failed for prefix " << prefix->toUri() << endl;
-    enabled_ = false;
   }
 
 private:
-  bool enabled_;
-  int responseCount_;
-  ptr_lib::shared_ptr<Data> contentData0_;
-  ptr_lib::shared_ptr<Data> contentData1_;
-  ptr_lib::shared_ptr<Data> cKeyData_;
-  ptr_lib::shared_ptr<Data> dKeyData_;
+  Name contentPrefix_;
+  Name cKeyName_;
+  Blob cKeyBlob_;
+  KeyChain& keyChain_;
 };
 
 int main(int argc, char** argv)
@@ -325,18 +326,24 @@ int main(int argc, char** argv)
     face.setCommandSigningInfo(*keyChain, keyChain->getDefaultCertificateName());
 
     Name userKeyName("/U/Key");
-    Name contentPrefix("/Prefix/SAMPLE");
+    Namespace prefix("/Prefix");
+    Name contentPrefix("/Prefix/SAMPLE/Content");
+    Name cKeyName = Name(contentPrefix).append("C-KEY").append("1");
 
-    TestProducer testProducer(contentPrefix, userKeyName, *keyChain);
+    Blob cKeyBlob = prepareData(prefix, userKeyName, cKeyName, *keyChain);
 
-    Name prefix("/Prefix");
-    cout << "Register prefix " << prefix.toUri() << endl;
-    face.registerPrefix
-      (prefix, 
-       bind(&TestProducer::onInterest, &testProducer, _1, _2, _3, _4, _5),
-       bind(&TestProducer::onRegisterFailed, &testProducer, _1));
+    // Make the callback to produce a Data packet for a content segment.
+    TestProducer testProducer(contentPrefix, cKeyName, cKeyBlob, *keyChain);
 
-    while (testProducer.getEnabled()) {
+    prefix.addOnObjectNeeded
+      (bind(&TestProducer::onObjectNeeded, &testProducer, _1, _2, _3));
+
+    cout << "Register prefix " << prefix.getName().toUri() << endl;
+    // Set the face and register to receive Interests.
+    prefix.setFace
+      (&face, bind(&TestProducer::onRegisterFailed, &testProducer, _1));
+
+    while (true) {
       face.processEvents();
       // We need to sleep for a few milliseconds so we don't use 100% of the CPU.
       usleep(10000);
