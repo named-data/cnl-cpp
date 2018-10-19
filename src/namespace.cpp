@@ -22,6 +22,7 @@
 #include <ndn-cpp/util/exponential-re-express.hpp>
 #include <ndn-cpp/util/logging.hpp>
 #include <cnl-cpp/namespace.hpp>
+#include "impl/pending-incoming-interest-table.hpp"
 
 using namespace std;
 using namespace ndn;
@@ -141,6 +142,10 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
     throw runtime_error
       ("The Data packet name does not equal the name of this Namespace node");
 
+  if (root_->impl_->pendingIncomingInterestTable_)
+    // Quickly send the Data packet to satisfy interest, before calling callbacks.
+    root_->impl_->pendingIncomingInterestTable_->satisfyInterests(*data);
+
   data_ = data;
   setState(NamespaceState_DATA_RECEIVED);
 
@@ -180,6 +185,28 @@ Namespace::Impl::addOnObjectNeeded(const OnObjectNeeded& onObjectNeeded)
   uint64_t callbackId = getNextCallbackId();
   onObjectNeededCallbacks_[callbackId] = onObjectNeeded;
   return callbackId;
+}
+
+void
+Namespace::Impl::setFace
+  (Face* face, const OnRegisterFailed& onRegisterFailed,
+   const OnRegisterSuccess& onRegisterSuccess)
+{
+  face_ = face;
+
+  if (onRegisterFailed) {
+    if (!root_->impl_->pendingIncomingInterestTable_)
+      // All onInterest callbacks share this in the root node. When we add a new
+      // Data packet to a Namespace node, we will also check if it satisfies a
+      // pending Interest.
+      root_->impl_->pendingIncomingInterestTable_ =
+        ptr_lib::make_shared<PendingIncomingInterestTable>();
+
+    face->registerPrefix
+      (name_,
+       bind(&Namespace::Impl::onInterest, shared_from_this(), _1, _2, _3, _4, _5),
+       onRegisterFailed, onRegisterSuccess);
+  }
 }
 
 Namespace&
@@ -442,6 +469,68 @@ Namespace::Impl::onDeserialized(const ptr_lib::shared_ptr<Object>& object)
 {
   object_ = object;
   setState(NamespaceState_OBJECT_READY);
+}
+
+void
+Namespace::Impl::onInterest
+   (const ptr_lib::shared_ptr<const Name>& prefix,
+    const ptr_lib::shared_ptr<const Interest>& interest, Face& face,
+    uint64_t interestFilterId,
+    const ptr_lib::shared_ptr<const InterestFilter>& filter)
+{
+  Name interestName = interest->getName();
+  if (interestName.size() >= 1 && interestName[-1].isImplicitSha256Digest())
+    // Strip the implicit digest.
+    interestName = interestName.getPrefix(-1);
+
+  if (!name_.isPrefixOf(interestName))
+    // No match.
+    return;
+
+  // Check if the Namespace node exists and has a matching Data packet.
+  if (hasChild(interestName)) {
+    Namespace* bestMatch = findBestMatchName(getChild(interestName), *interest);
+    if (bestMatch) {
+      // findBestMatchName makes sure there is a data_ packet.
+      face.putData(*bestMatch->impl_->data_);
+      return;
+    }
+  }
+
+  // No Data packet found, so save the pending Interest.
+  root_->impl_->pendingIncomingInterestTable_->add(interest, face);
+  // Signal that a Data packet is needed.
+  getChild(interestName).objectNeeded();
+}
+
+Namespace*
+Namespace::Impl::findBestMatchName
+  (Namespace& nameSpace, const Interest& interest)
+{
+  Namespace *bestMatch = 0;
+
+  // Search the children backwards which will result in a "less than" name
+  // among names of the same length.
+  for (map<Name::Component, ptr_lib::shared_ptr<Namespace>>::reverse_iterator
+        i = nameSpace.impl_->children_.rbegin();
+       i != nameSpace.impl_->children_.rend(); ++i) {
+    Namespace& child = *i->second;
+    Namespace* childBestMatch = findBestMatchName(child, interest);
+
+    if (childBestMatch &&
+        (!bestMatch ||
+         childBestMatch->getName().size() >= bestMatch->getName().size()))
+      bestMatch = childBestMatch;
+  }
+
+  if (bestMatch)
+    // We have a child match, and it is longer than this name, so return it.
+    return bestMatch;
+
+  if (nameSpace.impl_->data_ && interest.matchesData(*nameSpace.impl_->data_))
+    return &nameSpace;
+
+  return 0;
 }
 
 void

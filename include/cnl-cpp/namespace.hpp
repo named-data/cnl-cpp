@@ -65,6 +65,8 @@ enum NamespaceValidateState {
   NamespaceValidateState_VALIDATE_FAILURE = 3
 };
 
+class PendingIncomingInterestTable;
+
 /**
  * Namespace is the main class that represents the name tree and related
  * operations to manage it.
@@ -414,14 +416,37 @@ public:
 
   /**
    * Set the Face used when expressInterest is called on this or child nodes
-   * (unless a child node has a different Face).
+   * (unless a child node has a different Face), and optionally register to
+   * receive Interest packets under this prefix and answer with Data packets.
    * TODO: Replace this by a mechanism for requesting a Data object which is
    * more general than a Face network operation.
    * @param face The Face object. If this Namespace object already has a Face
    * object, it is replaced.
+   * @param onRegisterFailed (optional) Call face.registerPrefix to register to
+   * receive Interest packets under this prefix, and if register prefix fails
+   * for any reason, this calls onRegisterFailed(prefix). However, if
+   * onRegisterFailed is omitted, do not register to receive Interests.
+   * NOTE: The library will log any exceptions thrown by this callback, but for
+   * better error handling the callback should catch and properly handle any
+   * exceptions.
+   * param onRegisterSuccess: (optional) This calls
+   * onRegisterSuccess(prefix, registeredPrefixId) when this receives a success
+   * message from the forwarder. If
+   * onRegisterSuccess is an empty OnRegisterSuccess(), this does not use it.
+   * (The onRegisterSuccess parameter comes after onRegisterFailed because it
+   * can be empty or omitted, unlike onRegisterFailed.)
+   * NOTE: The library will log any exceptions thrown by this callback, but for
+   * better error handling the callback should catch and properly handle any
+   * exceptions.
    */
   void
-  setFace(ndn::Face* face) { impl_->setFace(face); }
+  setFace
+    (ndn::Face* face, 
+     const ndn::OnRegisterFailed& onRegisterFailed = ndn::OnRegisterFailed(),
+     const ndn::OnRegisterSuccess& onRegisterSuccess = ndn::OnRegisterSuccess())
+  {
+    impl_->setFace(face, onRegisterFailed, onRegisterSuccess);
+  }
 
   Namespace&
   setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler)
@@ -584,7 +609,9 @@ public:
     addOnObjectNeeded(const OnObjectNeeded& onObjectNeeded);
 
     void
-    setFace(ndn::Face* face) { face_ = face; }
+    setFace
+      (ndn::Face* face, const ndn::OnRegisterFailed& onRegisterFailed,
+       const ndn::OnRegisterSuccess& onRegisterSuccess);
 
     Namespace&
     setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler);
@@ -683,7 +710,30 @@ public:
     void
     onDeserialized(const ndn::ptr_lib::shared_ptr<Object>& object);
 
-private:
+    /**
+     * This is the default OnInterest callback which searches this node and
+     * children nodes for a matching Data packet, longest prefix. This calls
+     * face.putData(). If an existing Data packet is not found, add the
+     * Interest to the PendingIncomingInterestTable so that a later call to
+     * setData may satisfy it.
+     */
+    void
+    onInterest
+       (const ndn::ptr_lib::shared_ptr<const ndn::Name>& prefix,
+        const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
+        ndn::Face& face, uint64_t interestFilterId,
+        const ndn::ptr_lib::shared_ptr<const ndn::InterestFilter>& filter);
+
+    /**
+     * This is a helper for onInterest to find the longest-prefix match under
+     * the given Namespace.
+     * @param nameSpace This searches this Namespace and its children.
+     * @param interest This calls interest.matchesData().
+     * @return The Namespace object for the matched name or null if not found.
+     */
+    static Namespace*
+    findBestMatchName(Namespace& nameSpace, const ndn::Interest& interest);
+
     void
     onData(const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
            const ndn::ptr_lib::shared_ptr<ndn::Data>& data);
@@ -717,6 +767,9 @@ private:
     std::map<uint64_t, OnValidateStateChanged> onValidateStateChangedCallbacks_;
     // The key is the callback ID. The value is the OnObjectNeeded function.
     std::map<uint64_t, OnObjectNeeded> onObjectNeededCallbacks_;
+    // setFace will create this in the root Namespace node.
+    ndn::ptr_lib::shared_ptr<PendingIncomingInterestTable>
+      pendingIncomingInterestTable_;
     ndn::Interest defaultInterestTemplate_;
     ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
   };
