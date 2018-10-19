@@ -60,6 +60,34 @@ Namespace::Impl::Impl(Namespace& outerNamespace, const Name& name)
   defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
 }
 
+bool
+Namespace::Impl::hasChild(const ndn::Name& descendantName)
+{
+  if (!name_.isPrefixOf(descendantName))
+    throw runtime_error
+      ("The name of this node is not a prefix of the descendant name");
+
+  if (descendantName.size() == name_.size())
+    // A trivial case where it is already the name of this node.
+    return true;
+
+  // Find the child node whose name equals the descendantName. We know
+  // descendantNamespace is a prefix, so we can just go by component count
+  // instead of a full compare.
+  Namespace* descendantNamespace = &outerNamespace_;
+  while (true) {
+    const Name::Component& nextComponent =
+      descendantName[descendantNamespace->getName().size()];
+    if (!descendantNamespace->hasChild(nextComponent))
+      return false;
+
+    if (descendantNamespace->getName().size() + 1 == descendantName.size())
+      // nextComponent is the final component.
+      return true;
+    descendantNamespace = descendantNamespace->impl_->children_[nextComponent].get();
+  }
+}
+
 Namespace&
 Namespace::Impl::getChild(const Name& descendantName)
 {

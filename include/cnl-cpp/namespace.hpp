@@ -224,6 +224,19 @@ public:
   }
 
   /**
+   * Check if there is a descendant node with the name (which must have this
+   * node's name as a prefix).
+   * @param descendantName The name of the descendant child.
+   * @return True if this has a child with the name. This also returns True if
+   * the given name equals the name of this node.
+   */
+  bool
+  hasChild(const ndn::Name& descendantName) const
+  {
+    return impl_->hasChild(descendantName);
+  }
+
+  /**
    * Get a child, creating it if needed. This is equivalent to
    * namespace[component]. If a child is created, this calls callbacks as
    * described by addOnStateChanged.
@@ -527,6 +540,9 @@ public:
     {
       return children_.find(component) != children_.end();
     }
+
+    bool
+    hasChild(const ndn::Name& descendantName);
 
     Namespace&
     getChild(const ndn::Name::Component& component)
