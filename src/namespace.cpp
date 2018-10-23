@@ -52,8 +52,9 @@ Namespace::getNextCallbackId()
   return ++lastCallbackId_;
 }
 
-Namespace::Impl::Impl(Namespace& outerNamespace, const Name& name)
-: outerNamespace_(outerNamespace), name_(name), parent_(0), 
+Namespace::Impl::Impl
+  (Namespace& outerNamespace, const Name& name, KeyChain* keyChain)
+: outerNamespace_(outerNamespace), name_(name), keyChain_(keyChain), parent_(0),
   root_(&outerNamespace), state_(NamespaceState_NAME_EXISTS),
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), face_(0),
   maxInterestLifetime_(-1)
@@ -288,6 +289,19 @@ Namespace::Impl::getFace()
   while (nameSpace) {
     if (nameSpace->impl_->face_)
       return nameSpace->impl_->face_;
+    nameSpace = nameSpace->impl_->parent_;
+  }
+
+  return 0;
+}
+
+KeyChain*
+Namespace::Impl::getKeyChain()
+{
+  Namespace* nameSpace = &outerNamespace_;
+  while (nameSpace) {
+    if (nameSpace->impl_->keyChain_)
+      return nameSpace->impl_->keyChain_;
     nameSpace = nameSpace->impl_->parent_;
   }
 

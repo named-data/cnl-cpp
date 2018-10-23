@@ -150,9 +150,12 @@ public:
    * myNamespace.getChild("foo") or myNamespace["foo"].
    * @param name The name of this root node in the namespace. This makes a copy
    * of the name.
+   * @param keyChain (optional) The KeyChain for signing packets, if needed. The
+   * KeyChain object must remain valid during the life of this Namespace object.
+   * You can also call setKeyChain().
    */
-  Namespace(const ndn::Name& name)
-  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, name))
+  Namespace(const ndn::Name& name, ndn::KeyChain* keyChain = 0)
+  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, name, keyChain))
   {
   }
 
@@ -448,6 +451,18 @@ public:
     impl_->setFace(face, onRegisterFailed, onRegisterSuccess);
   }
 
+  /**
+   * Set the KeyChain used to sign packets (if needed) at this or child nodes.
+   * If a KeyChain already exists at this node, it is replaced.
+   * @param keyChain The KeyChain, which must remain valid during the life of
+   * this Namespace object.
+   */
+  void
+  setKeyChain(ndn::KeyChain* keyChain)
+  {
+    impl_->setKeyChain(keyChain);
+  }
+
   Namespace&
   setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler)
   {
@@ -537,7 +552,8 @@ public:
      * @param outerNamespace The Namespace which is creating this inner Imp.
      * @param name See the Namespace constructor.
      */
-    Impl(Namespace& outerNamespace, const ndn::Name& name);
+    Impl
+      (Namespace& outerNamespace, const ndn::Name& name, ndn::KeyChain* keyChain);
 
     const ndn::Name&
     getName() const { return name_; }
@@ -613,6 +629,9 @@ public:
       (ndn::Face* face, const ndn::OnRegisterFailed& onRegisterFailed,
        const ndn::OnRegisterSuccess& onRegisterSuccess);
 
+    void
+    setKeyChain(ndn::KeyChain* keyChain) { keyChain_ = keyChain; }
+
     Namespace&
     setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler);
 
@@ -640,6 +659,14 @@ public:
      */
     ndn::Face*
     getFace();
+
+    /**
+     * Get the KeyChain set by setKeyChain (or the NameSpace constructor) on
+     * this or a parent Namespace node.
+     * @return The KeyChain, or null if not set on this or any parent.
+     */
+    ndn::KeyChain*
+    getKeyChain();
 
     /**
      * Get the maximum Interest lifetime that was set on this or a parent node.
@@ -760,6 +787,7 @@ public:
     ndn::ptr_lib::shared_ptr<ndn::Data> data_;
     ndn::ptr_lib::shared_ptr<Object> object_;
     ndn::Face* face_;
+    ndn::KeyChain* keyChain_;
     ndn::ptr_lib::shared_ptr<Handler> handler_;
     // The key is the callback ID. The value is the OnStateChanged function.
     std::map<uint64_t, OnStateChanged> onStateChangedCallbacks_;
