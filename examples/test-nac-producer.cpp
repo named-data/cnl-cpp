@@ -270,12 +270,12 @@ public:
   {
     if (!(neededNamespace.getName().size() == contentPrefix_.size() + 1 &&
           contentPrefix_.isPrefixOf(neededNamespace.getName()) &&
-          neededNamespace.getName()[contentPrefix_.size()].isSegment()))
+          neededNamespace.getName()[-1].isSegment()))
         // Not a content segment, ignore.
         return false;
 
     // Get the segment number.
-    uint64_t segment = neededNamespace.getName()[contentPrefix_.size()].toSegment();
+    uint64_t segment = neededNamespace.getName()[-1].toSegment();
     if (!(segment >= 0 && segment <= 1))
       // An invalid segment was requested.
       return false;
