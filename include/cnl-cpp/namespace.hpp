@@ -632,6 +632,14 @@ public:
     void
     setKeyChain(ndn::KeyChain* keyChain) { keyChain_ = keyChain; }
 
+    /**
+     * Get the KeyChain set by setKeyChain (or the NameSpace constructor) on
+     * this or a parent Namespace node.
+     * @return The KeyChain, or null if not set on this or any parent.
+     */
+    ndn::KeyChain*
+    getKeyChain();
+
     Namespace&
     setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler);
 
@@ -659,14 +667,6 @@ public:
      */
     ndn::Face*
     getFace();
-
-    /**
-     * Get the KeyChain set by setKeyChain (or the NameSpace constructor) on
-     * this or a parent Namespace node.
-     * @return The KeyChain, or null if not set on this or any parent.
-     */
-    ndn::KeyChain*
-    getKeyChain();
 
     /**
      * Get the maximum Interest lifetime that was set on this or a parent node.
