@@ -48,8 +48,7 @@ int main(int argc, char** argv)
     ptr_lib::shared_ptr<SegmentedObjectHandler> handler =
       ptr_lib::make_shared<SegmentedObjectHandler>
         (bind(&onSegmentedObject, _1, _2, &enabled));
-    page.setHandler(handler);
-    handler->start();
+    page.setHandler(handler).objectNeeded();
 
     while (enabled) {
       face.processEvents();
