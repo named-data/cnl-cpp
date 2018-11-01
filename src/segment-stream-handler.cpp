@@ -67,8 +67,22 @@ SegmentStreamHandler::Impl::setInterestPipelineSize(int interestPipelineSize)
 void
 SegmentStreamHandler::Impl::onNamespaceSet()
 {
+  outerHandler_.getNamespace().addOnObjectNeeded
+    (bind(&SegmentStreamHandler::Impl::onObjectNeeded, shared_from_this(), _1, _2, _3));
   outerHandler_.getNamespace().addOnStateChanged
     (bind(&SegmentStreamHandler::Impl::onStateChanged, shared_from_this(), _1, _2, _3, _4));
+}
+
+bool
+SegmentStreamHandler::Impl::onObjectNeeded
+  (Namespace& nameSpace, Namespace& neededNamespace,
+   uint64_t callbackId)
+{
+  if (&nameSpace != &neededNamespace)
+    return false;
+
+  requestNewSegments(1);
+  return true;
 }
 
 Namespace&
@@ -167,7 +181,7 @@ SegmentStreamHandler::Impl::requestNewSegments(int maxRequestedSegments)
       continue;
 
     ++nRequestedSegments;
-    segment.expressInterest();
+    segment.objectNeeded();
   }
 }
 
