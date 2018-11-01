@@ -69,7 +69,6 @@ Namespace::Impl::Impl
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), face_(0),
   maxInterestLifetime_(-1)
 {
-  defaultInterestTemplate_.setInterestLifetimeMilliseconds(4000.0);
 }
 
 bool
@@ -268,8 +267,6 @@ Namespace::Impl::expressInterest(const Interest *interestTemplate)
   // TODO: What if the state is already INTEREST_EXPRESSED?
   setState(NamespaceState_INTEREST_EXPRESSED);
 
-  if (!interestTemplate)
-    interestTemplate = &defaultInterestTemplate_;
   face->expressInterest
     (name_, interestTemplate,
      bind(&Namespace::Impl::onData, shared_from_this(), _1, _2),

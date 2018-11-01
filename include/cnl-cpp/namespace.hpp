@@ -831,7 +831,6 @@ public:
     // setFace will create this in the root Namespace node.
     ndn::ptr_lib::shared_ptr<PendingIncomingInterestTable>
       pendingIncomingInterestTable_;
-    ndn::Interest defaultInterestTemplate_;
     ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
   };
 
