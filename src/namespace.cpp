@@ -32,6 +32,16 @@ INIT_LOGGER("cnl_cpp.Namespace");
 
 namespace cnl_cpp {
 
+void
+Namespace::Handler::setNamespace(Namespace* nameSpace)
+{
+  if (namespace_ && namespace_ != nameSpace)
+    throw runtime_error("This Handler is already attached to a different Namespace object");
+
+  namespace_ = nameSpace;
+  onNamespaceSet();
+}
+
 bool
 Namespace::Handler::canDeserialize
   (Namespace& objectNamespace, const Blob& blob,
@@ -217,12 +227,7 @@ Namespace::Impl::setHandler(const ptr_lib::shared_ptr<Handler>& handler)
     // TODO: Should we try to chain handlers?
     throw runtime_error("This Namespace node already has a handler");
 
-  if (handler->namespace_)
-    // TODO: Should we allow attaching to multiple Namespace nodes?
-    throw runtime_error("The handler is already attached to a Namespace node");
-
-  handler->namespace_ = &outerNamespace_;
-  handler->onNamespaceSet();
+  handler->setNamespace(&outerNamespace_);
   handler_ = handler;
   return outerNamespace_;
 }

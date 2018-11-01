@@ -100,7 +100,17 @@ public:
     Handler()
     : namespace_(0)
     {}
-    
+
+    /**
+     * Set the Namespace that this handler is attached to. (This is
+     * automatically called when you call Namespace.setHandler.)
+     * @param nameSpace The Handler's Namespace.
+     * @throws runtime_error if this Handler is already attached to a different
+     * Namespace.
+     */
+    void
+    setNamespace(Namespace* nameSpace);
+
     /**
      * Get the Namespace that this Handler is attached to.
      * @return This Handler's Namespace, or null if this Handler is not attached
@@ -131,15 +141,13 @@ public:
   protected:
     /**
      * This protected method is called after this Handler's Namespace field is
-     * set by attaching it. A subclass can override to perform actions with
+     * set by setNamespace(). A subclass can override to perform actions with
      * getNamespace() such as adding callbacks to the Namespace.
      */
     virtual void
     onNamespaceSet();
 
   private:
-    friend Impl;
-
     Namespace* namespace_;
   };
 
