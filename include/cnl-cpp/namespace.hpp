@@ -471,6 +471,17 @@ public:
     impl_->setKeyChain(keyChain);
   }
 
+  /**
+   * Set the MetaInfo to use when creating a new Data packet at this or child
+   * nodes. If a MetaInfo already exists at this node, it is replaced.
+   * @param metaInfo The MetaInfo object, which is copied.
+   */
+  void
+  setNewDataMetaInfo(const ndn::MetaInfo& metaInfo)
+  {
+    impl_->setNewDataMetaInfo(metaInfo);
+  }
+
   Namespace&
   setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler)
   {
@@ -640,6 +651,12 @@ public:
     void
     setKeyChain(ndn::KeyChain* keyChain) { keyChain_ = keyChain; }
 
+    void
+    setNewDataMetaInfo(const ndn::MetaInfo& metaInfo)
+    {
+      newDataMetaInfo_ = ndn::ptr_lib::make_shared<ndn::MetaInfo>(metaInfo);
+    }
+
     /**
      * Get the KeyChain set by setKeyChain (or the NameSpace constructor) on
      * this or a parent Namespace node.
@@ -678,11 +695,18 @@ public:
 
     /**
      * Get the maximum Interest lifetime that was set on this or a parent node.
-     * @return The  maximum Interest lifetime, or the default if not set on this
+     * @return The maximum Interest lifetime, or the default if not set on this
      * or any parent.
      */
     ndn::Milliseconds
     getMaxInterestLifetime();
+
+    /**
+     * Get the new data MetaInfo that was set on this or a parent node.
+     * @return The new data MetaInfo, or null if not set on this or any parent.
+     */
+    const ndn::MetaInfo*
+    getNewDataMetaInfo();
 
     /**
      * If canDeserialize on the Handler of this or a parent Namespace node
@@ -796,6 +820,7 @@ public:
     ndn::ptr_lib::shared_ptr<Object> object_;
     ndn::Face* face_;
     ndn::KeyChain* keyChain_;
+    ndn::ptr_lib::shared_ptr<ndn::MetaInfo> newDataMetaInfo_;
     ndn::ptr_lib::shared_ptr<Handler> handler_;
     // The key is the callback ID. The value is the OnStateChanged function.
     std::map<uint64_t, OnStateChanged> onStateChangedCallbacks_;

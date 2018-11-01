@@ -327,6 +327,19 @@ Namespace::Impl::getMaxInterestLifetime()
   return 16000.0;
 }
 
+const MetaInfo*
+Namespace::Impl::getNewDataMetaInfo()
+{
+  Namespace* nameSpace = &outerNamespace_;
+  while (nameSpace) {
+    if (nameSpace->impl_->newDataMetaInfo_)
+      return nameSpace->impl_->newDataMetaInfo_.get();
+    nameSpace = nameSpace->impl_->parent_;
+  }
+
+  return 0;
+}
+
 void
 Namespace::Impl::deserialize(const Blob& blob)
 {
