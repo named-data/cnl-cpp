@@ -19,8 +19,8 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-#include <cnl-cpp/segment-stream-handler.hpp>
 #include <ndn-cpp/util/logging.hpp>
+#include <cnl-cpp/segment-stream-handler.hpp>
 
 using namespace std;
 using namespace ndn;
@@ -36,7 +36,8 @@ SegmentStreamHandler::onNamespaceSet() { impl_->onNamespaceSet(); }
 SegmentStreamHandler::Impl::Impl
   (SegmentStreamHandler& outerHandler, const OnSegment& onSegment)
 : outerHandler_(outerHandler), maxRetrievedSegmentNumber_(-1),
-  didRequestFinalSegment_(false), finalSegmentNumber_(-1), interestPipelineSize_(8)
+  didRequestFinalSegment_(false), finalSegmentNumber_(-1),
+  interestPipelineSize_(8), initialInterestCount_(1)
 {
   if (onSegment)
     addOnSegment(onSegment);
@@ -65,6 +66,14 @@ SegmentStreamHandler::Impl::setInterestPipelineSize(int interestPipelineSize)
 }
 
 void
+SegmentStreamHandler::Impl::setInitialInterestCount(int initialInterestCount)
+{
+  if (initialInterestCount < 1)
+    throw runtime_error("The initial Interest count must be at least 1");
+  initialInterestCount_ = initialInterestCount;
+}
+
+void
 SegmentStreamHandler::Impl::onNamespaceSet()
 {
   outerHandler_.getNamespace().addOnObjectNeeded
@@ -81,7 +90,7 @@ SegmentStreamHandler::Impl::onObjectNeeded
   if (&nameSpace != &neededNamespace)
     return false;
 
-  requestNewSegments(1);
+  requestNewSegments(initialInterestCount_);
   return true;
 }
 

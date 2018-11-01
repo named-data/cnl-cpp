@@ -96,6 +96,28 @@ public:
     impl_->setInterestPipelineSize(interestPipelineSize);
   }
 
+  /**
+   * Get the initial Interest count (as described in setInitialInterestCount).
+   * @return The initial Interest count.
+   */
+  int
+  getInitialInterestCount() { return impl_->getInitialInterestCount(); }
+
+  /**
+   * Set the number of initial Interests to send for segments. By default this
+   * just sends an Interest for the first segment and waits for the response
+   * before fetching more segments, but if you know the number of segments you
+   * can reduce latency by initially requesting more segments. (However, you
+   * should not use a number larger than the Interest pipeline size.)
+   * @param initialInterestCount The initial Interest count.
+   * @throws runtime_error if initialInterestCount is less than 1.
+   */
+  void
+  setInitialInterestCount(int initialInterestCount)
+  {
+    impl_->setInitialInterestCount(initialInterestCount);
+  }
+
 protected:
   virtual void
   onNamespaceSet();
@@ -129,6 +151,12 @@ private:
 
     void
     setInterestPipelineSize(int interestPipelineSize);
+
+    int
+    getInitialInterestCount() { return initialInterestCount_; }
+
+    void
+    setInitialInterestCount(int initialInterestCount);
 
     void
     onNamespaceSet();
@@ -171,6 +199,7 @@ private:
     bool didRequestFinalSegment_;
     int finalSegmentNumber_;
     int interestPipelineSize_;
+    int initialInterestCount_;
     // The key is the callback ID. The value is the OnSegment function.
     std::map<uint64_t, OnSegment> onSegmentCallbacks_;
   };
