@@ -48,6 +48,9 @@
 /* Define to 1 if you have the `memset' function. */
 #undef HAVE_MEMSET
 
+/* 1 if have Google Protobuf. */
+#undef HAVE_PROTOBUF
+
 /* Define to 1 if you have the `round' function. */
 #undef HAVE_ROUND
 
