@@ -19,6 +19,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+#include <sstream>
 #include <ndn-cpp/util/exponential-re-express.hpp>
 #include <ndn-cpp/util/logging.hpp>
 #include <cnl-cpp/namespace.hpp>
@@ -67,7 +68,7 @@ Namespace::Impl::Impl
 : outerNamespace_(outerNamespace), name_(name), keyChain_(keyChain), parent_(0),
   root_(&outerNamespace), state_(NamespaceState_NAME_EXISTS),
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), face_(0),
-  maxInterestLifetime_(-1)
+  decryptor_(0), maxInterestLifetime_(-1)
 {
 }
 
@@ -337,6 +338,19 @@ Namespace::Impl::getNewDataMetaInfo()
   return 0;
 }
 
+DecryptorV2*
+Namespace::Impl::getDecryptor()
+{
+  Namespace* nameSpace = &outerNamespace_;
+  while (nameSpace) {
+    if (nameSpace->impl_->decryptor_)
+      return nameSpace->impl_->decryptor_;
+    nameSpace = nameSpace->impl_->parent_;
+  }
+
+  return 0;
+}
+
 void
 Namespace::Impl::deserialize(const Blob& blob)
 {
@@ -574,9 +588,29 @@ Namespace::Impl::onData
   // TODO: Start the validator.
   dataNamespace.impl_->setValidateState(NamespaceValidateState_VALIDATING);
 
-  // TODO: Decrypt.
+  DecryptorV2* decryptor = dataNamespace.impl_->getDecryptor();
+  if (!decryptor) {
+    dataNamespace.impl_->deserialize(data->getContent());
+    return;
+  }
 
-  dataNamespace.impl_->deserialize(data->getContent());
+  // Decrypt, then deserialize.
+  dataNamespace.impl_->setState(NamespaceState_DECRYPTING);
+  ptr_lib::shared_ptr<EncryptedContent> encryptedContent =
+   ptr_lib::make_shared<EncryptedContent>();
+  try {
+    encryptedContent->wireDecodeV2(data->getContent());
+  } catch (const std::exception& ex) {
+    dataNamespace.impl_->decryptionError_ =
+      string("Error decoding the EncryptedContent: ") + ex.what();
+    dataNamespace.impl_->setState(NamespaceState_DECRYPTION_ERROR);
+    return;
+  }
+
+  decryptor->decrypt
+    (encryptedContent,
+     bind(&Namespace::Impl::deserialize, shared_from_this(), _1),
+     bind(&Namespace::Impl::onDecryptionError, shared_from_this(), _1, _2));
 }
 
 void
@@ -594,6 +628,16 @@ Namespace::Impl::onNetworkNack
   // TODO: Need to detect a network nack on a child node.
   networkNack_ = networkNack;
   setState(NamespaceState_INTEREST_NETWORK_NACK);
+}
+
+void
+Namespace::Impl::onDecryptionError
+  (EncryptError::ErrorCode errorCode, const string& message)
+{
+  ostringstream decryptionErrorText;
+  decryptionErrorText << "Decryptor error " << errorCode << ": " + message;
+  decryptionError_ = decryptionErrorText.str();
+  setState(NamespaceState_DECRYPTION_ERROR);
 }
 
 #ifdef NDN_CPP_HAVE_BOOST_ASIO

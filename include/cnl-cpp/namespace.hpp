@@ -29,6 +29,7 @@
 #endif
 
 #include <ndn-cpp/security/v2/validation-error.hpp>
+#include <ndn-cpp/encrypt/decryptor-v2.hpp>
 #include "blob-object.hpp"
 
 namespace cnl_cpp {
@@ -226,6 +227,15 @@ public:
   getValidationError() { return impl_->getValidationError(); }
 
   /**
+   * Get the decryption error for when the state is set to
+   * NamespaceState_DECRYPTION_ERROR .
+   * @return The decryption error, or "" if it hasn't been set due to a
+   * DECRYPTION_ERROR.
+   */
+  const std::string&
+  getDecryptionError() { return impl_->getDecryptionError(); }
+
+  /**
    * Check if this node in the namespace has the given child.
    * @param component The name component of the child.
    * @return True if this has a child with the name component.
@@ -412,8 +422,8 @@ public:
    * method. If the owner of the callback (the application or a Handler) can
    * produce the object for the neededNamespace, then the callback should return
    * true and the owner should produce the object (either during the callback or
-   * at a later time) and call neededNamespace.setObject(). If the owner cannot
-   * produce the object then the callback should return false.
+   * at a later time) and call neededNamespace.serializeObject(). If the owner
+   * cannot produce the object then the callback should return false.
    * NOTE: The library will log any exceptions thrown by this callback, but for
    * better error handling the callback should catch and properly handle any
    * exceptions.
@@ -480,6 +490,18 @@ public:
   setNewDataMetaInfo(const ndn::MetaInfo& metaInfo)
   {
     impl_->setNewDataMetaInfo(metaInfo);
+  }
+
+  /**
+   * Set the decryptor used to decrypt the EncryptedContent of a Data packet at
+   * this or child nodes. If a decryptor already exists at this node, it is
+   * replaced.
+   * @param decryptor The decryptor.
+   */
+  void
+  setDecryptor(ndn::DecryptorV2* decryptor)
+  {
+    impl_->setDecryptor(decryptor);
   }
 
   Namespace&
@@ -595,6 +617,9 @@ public:
     const ndn::ptr_lib::shared_ptr<ndn::ValidationError>&
     getValidationError() { return validationError_; }
 
+    const std::string&
+    getDecryptionError() { return decryptionError_; }
+
     bool
     hasChild(const ndn::Name::Component& component) const
     {
@@ -657,6 +682,9 @@ public:
       newDataMetaInfo_ = ndn::ptr_lib::make_shared<ndn::MetaInfo>(metaInfo);
     }
 
+    void
+    setDecryptor(ndn::DecryptorV2* decryptor) { decryptor_ = decryptor; }
+
     /**
      * Get the KeyChain set by setKeyChain (or the NameSpace constructor) on
      * this or a parent Namespace node.
@@ -707,6 +735,13 @@ public:
      */
     const ndn::MetaInfo*
     getNewDataMetaInfo();
+
+    /**
+     * Get the decryptor set by setDecryptor on this or a parent Namespace node.
+     * @return The DecryptorV2, or null if not set on this or any parent.
+     */
+    ndn::DecryptorV2*
+    getDecryptor();
 
     /**
      * If canDeserialize on the Handler of this or a parent Namespace node
@@ -805,6 +840,10 @@ public:
       (const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
        const ndn::ptr_lib::shared_ptr<ndn::NetworkNack>& networkNack);
 
+    void
+    onDecryptionError
+      (ndn::EncryptError::ErrorCode errorCode, const std::string& message);
+
     Namespace& outerNamespace_;
     ndn::Name name_;
     // parent_ and root_ may be updated by createChild.
@@ -821,6 +860,8 @@ public:
     ndn::Face* face_;
     ndn::KeyChain* keyChain_;
     ndn::ptr_lib::shared_ptr<ndn::MetaInfo> newDataMetaInfo_;
+    ndn::DecryptorV2* decryptor_;
+    std::string decryptionError_;
     ndn::ptr_lib::shared_ptr<Handler> handler_;
     // The key is the callback ID. The value is the OnStateChanged function.
     std::map<uint64_t, OnStateChanged> onStateChangedCallbacks_;
