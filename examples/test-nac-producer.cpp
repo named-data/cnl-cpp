@@ -254,24 +254,17 @@ public:
       // An invalid segment was requested.
       return false;
 
-    // Make the Data packet for the segment. Imitate createEncryptedContent.
-    ptr_lib::shared_ptr<Data> data = ptr_lib::make_shared<Data>
-      (Name(contentPrefix_).appendSegment(segment));
-    string segmentContent;
+    string text;
     if (segment == 0)
-      segmentContent = "This test message was decrypted";
+      text = "This test message was decrypted";
     else
-      segmentContent = " from segments.";
-    data->setContent
-      (encryptor_->encrypt
-       (Blob((const uint8_t*)segmentContent.c_str(), segmentContent.size()))->wireEncodeV2());
-    data->getMetaInfo().setFinalBlockId(Name().appendSegment(1)[0]);
-    keyChain_->sign(*data);
+      text = " from segments.";
+    Blob segmentContent((const uint8_t*)text.c_str(), text.size());
+    // Now call serializeObject which will answer the pending incoming Interest.
+    cout << "Producing data " << neededNamespace.getName() << endl;
+    neededNamespace.serializeObject(ptr_lib::make_shared<BlobObject>
+      (encryptor_->encrypt(segmentContent)->wireEncodeV2()));
 
-    // Now call setData which will answer the pending incoming Interest.
-    // Note that the encrypted name has extra child components for the C-KEY.
-    cout << "Produced data " << data->getName() << endl;
-    neededNamespace[data->getName()].setData(data);
     return true;
   }
 
