@@ -26,12 +26,10 @@
 #include <cstdlib>
 #include <iostream>
 #include <unistd.h>
-#include <ndn-cpp/face.hpp>
 #include <ndn-cpp/security/key-chain.hpp>
-#include <ndn-cpp/security/safe-bag.hpp>
-#include <ndn-cpp/security/policy/no-verify-policy-manager.hpp>
-#include <ndn-cpp/encrypt/algo/rsa-algorithm.hpp>
-#include <ndn-cpp/encrypt/algo/encryptor.hpp>
+#include <ndn-cpp/security/validator-null.hpp>
+#include <ndn-cpp/encrypt/encryptor-v2.hpp>
+#include <ndn-cpp/encrypt/access-manager-v2.hpp>
 #include <cnl-cpp/namespace.hpp>
 
 using namespace std;
@@ -166,8 +164,8 @@ static uint8_t DEFAULT_RSA_PRIVATE_KEY_DER[] = {
   0xcb, 0xea, 0x8f
 };
 
-// This matches FIXTURE_USER_D_KEY in test-nac-consumer.
-static uint8_t FIXTURE_USER_E_KEY[] = {
+// This matches MEMBER_PRIVATE_KEY in test-nac-consumer.
+static uint8_t MEMBER_PUBLIC_KEY[] = {
   0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
   0x01, 0x05, 0x00, 0x03, 0x82, 0x01, 0x0f, 0x00, 0x30, 0x82, 0x01, 0x0a, 0x02, 0x82, 0x01, 0x01,
   0x00, 0xd2, 0x1c, 0x8d, 0x80, 0x78, 0xcc, 0x92, 0xb7, 0x6e, 0xfd, 0x28, 0xdc, 0xb4, 0xa7, 0x81,
@@ -189,65 +187,44 @@ static uint8_t FIXTURE_USER_E_KEY[] = {
   0xd5, 0x02, 0x03, 0x01, 0x00, 0x01
 };
 
-/**
- * Create an in-memory KeyChain with default keys.
- * @return A new KeyChain.
- */
-ptr_lib::shared_ptr<KeyChain>
-createKeyChain()
+static void
+onError(EncryptError::ErrorCode errorCode, const string& message)
 {
-  ptr_lib::shared_ptr<KeyChain> keyChain(new KeyChain
-    ("pib-memory:", "tpm-memory:"));
-  keyChain->importSafeBag(SafeBag
-    (Name("/testname/KEY/123"),
-     Blob(DEFAULT_RSA_PRIVATE_KEY_DER, sizeof(DEFAULT_RSA_PRIVATE_KEY_DER)),
-     Blob(DEFAULT_RSA_PUBLIC_KEY_DER, sizeof(DEFAULT_RSA_PUBLIC_KEY_DER))));
-
-  return keyChain;
+  cout << "onErrpr: " << message << endl;
 }
 
 /**
- * Create the encrypted C-KEY and D-KEY, and add to the Namespace object.
- * @return The C-KEY for encrypting the content.
+ * Create the encrypted CK Data and KDK, and add to the Namespace object.
+ * For the meaning of "CK data", etc. see:
+ * https://github.com/named-data/name-based-access-control/blob/new/docs/spec.rst
+ * @return The EncryptorV2 for encrypting the content.
  */
-Blob
+static ptr_lib::shared_ptr<EncryptorV2>
 prepareData
-  (Namespace& nameSpace, const Name& userKeyName, const Name& cKeyName,
-   KeyChain& keyChain)
+  (const Name& ckPrefix, KeyChain* keyChain, Face* face, Face* accessManagerFace,
+   Validator* validator)
 {
-  // Imitate test-consumer from the NDN-CPP integration tests.
-  Name dKeyName = Name("/Prefix/READ/D-KEY/1/2");
+  // Imitate test-encryptor-v2 and test-access-manager-v2 from the unit tests.
+  ptr_lib::shared_ptr<PibIdentity> accessIdentity = keyChain->createIdentityV2
+    (Name("/access/policy/identity"), RsaKeyParams());
+  // This matches memberKeyName in test-nac-consumer.
+  Name memberKeyName("/first/user/KEY/%0C%87%EB%E6U%27B%D6");
 
-  // Generate the E-KEY and D-KEY.
-  RsaKeyParams params;
-  Blob fixtureDKeyBlob = RsaAlgorithm::generateKey(params).getKeyBits();
-  Blob fixtureEKeyBlob = RsaAlgorithm::deriveEncryptKey
-    (fixtureDKeyBlob).getKeyBits();
+  // The member certificate only needs to have a name and public key.
+  CertificateV2 memberCertificate;
+  memberCertificate.setName(Name(memberKeyName).append("self").append("1"));
+  memberCertificate.setContent(Blob(MEMBER_PUBLIC_KEY, sizeof(MEMBER_PUBLIC_KEY)));
 
-  // The user key.
-  Blob fixtureUserEKeyBlob(FIXTURE_USER_E_KEY, sizeof(FIXTURE_USER_E_KEY));
+  Name dataset("/dataset");
+  AccessManagerV2 accessManager(accessIdentity, dataset, keyChain, accessManagerFace);
+  // The face now has callbacks to the AccessManagerV2 and will keep it alive.
+  accessManager.addMember(memberCertificate);
 
-  // Load the C-KEY.
-  Blob fixtureCKeyBlob(AES_KEY, sizeof(AES_KEY));
-
-  // Imitate createEncryptedCKey.
-  ptr_lib::shared_ptr<Data> cKeyData = ptr_lib::make_shared<Data>(cKeyName);
-  EncryptParams encryptParams(ndn_EncryptAlgorithmType_RsaOaep);
-  Encryptor::encryptData
-    (*cKeyData, fixtureCKeyBlob, dKeyName, fixtureEKeyBlob, encryptParams);
-  keyChain.sign(*cKeyData);
-  nameSpace[cKeyData->getName()].setData(cKeyData);
-
-  // Imitate createEncryptedDKey.
-  ptr_lib::shared_ptr<Data> dKeyData = ptr_lib::make_shared<Data>(dKeyName);
-  encryptParams = EncryptParams(ndn_EncryptAlgorithmType_RsaOaep);
-  Encryptor::encryptData
-    (*dKeyData, fixtureDKeyBlob, userKeyName, fixtureUserEKeyBlob,
-     encryptParams);
-  keyChain.sign(*dKeyData);
-  nameSpace[dKeyData->getName()].setData(dKeyData);
-
-  return fixtureCKeyBlob;
+  // TODO: Sign with better than SHA256?
+  return ptr_lib::make_shared<EncryptorV2>
+    (Name(accessIdentity->getName()).append("NAC").append(dataset),
+     ckPrefix, SigningInfo(SigningInfo::SIGNER_TYPE_SHA256),
+     &onError, validator, keyChain, face);
 }
 
 class TestProducer {
@@ -257,10 +234,8 @@ public:
    * encrypted segments.
    */
   TestProducer
-    (const Name& contentPrefix, const Name& cKeyName, const Blob& cKeyBlob,
-     KeyChain& keyChain)
-  : contentPrefix_(contentPrefix), cKeyName_(cKeyName), cKeyBlob_(cKeyBlob),
-    keyChain_(keyChain)
+    (const Name& contentPrefix, EncryptorV2* encryptor, KeyChain* keyChain)
+  : contentPrefix_(contentPrefix), encryptor_(encryptor), keyChain_(keyChain)
   {
   }
 
@@ -281,20 +256,18 @@ public:
       return false;
 
     // Make the Data packet for the segment. Imitate createEncryptedContent.
-    Blob segmentContent;
-    if (segment == 0)
-      segmentContent = Blob(DATA0_CONTENT, sizeof(DATA0_CONTENT));
-    else
-      segmentContent = Blob(DATA1_CONTENT, sizeof(DATA1_CONTENT));
-    EncryptParams encryptParams(ndn_EncryptAlgorithmType_AesCbc);
-    encryptParams.setInitialVector(Blob(INITIAL_VECTOR, sizeof(INITIAL_VECTOR)));
     ptr_lib::shared_ptr<Data> data = ptr_lib::make_shared<Data>
       (Name(contentPrefix_).appendSegment(segment));
-
-    Encryptor::encryptData
-      (*data, segmentContent, cKeyName_, cKeyBlob_,  encryptParams);
+    string segmentContent;
+    if (segment == 0)
+      segmentContent = "This test message was decrypted";
+    else
+      segmentContent = " from segments.";
+    data->setContent
+      (encryptor_->encrypt
+       (Blob((const uint8_t*)segmentContent.c_str(), segmentContent.size()))->wireEncodeV2());
     data->getMetaInfo().setFinalBlockId(Name().appendSegment(1)[0]);
-    keyChain_.sign(*data);
+    keyChain_->sign(*data);
 
     // Now call setData which will answer the pending incoming Interest.
     // Note that the encrypted name has extra child components for the C-KEY.
@@ -311,9 +284,8 @@ public:
 
 private:
   Name contentPrefix_;
-  Name cKeyName_;
-  Blob cKeyBlob_;
-  KeyChain& keyChain_;
+  EncryptorV2* encryptor_;
+  KeyChain* keyChain_;
 };
 
 int main(int argc, char** argv)
@@ -322,29 +294,43 @@ int main(int argc, char** argv)
     // The default Face will connect using a Unix socket, or to "localhost".
     Face face;
 
-    ptr_lib::shared_ptr<KeyChain> keyChain = createKeyChain();
-    face.setCommandSigningInfo(*keyChain, keyChain->getDefaultCertificateName());
+    // Create an in-memory key chain with default keys.
+    KeyChain keyChain("pib-memory:", "tpm-memory:");
+    keyChain.importSafeBag(SafeBag
+      (Name("/testname/KEY/123"),
+       Blob(DEFAULT_RSA_PRIVATE_KEY_DER, sizeof(DEFAULT_RSA_PRIVATE_KEY_DER)),
+       Blob(DEFAULT_RSA_PUBLIC_KEY_DER, sizeof(DEFAULT_RSA_PUBLIC_KEY_DER))));
+    face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
 
-    Name userKeyName("/U/Key");
-    Namespace prefix("/Prefix");
-    Name contentPrefix("/Prefix/SAMPLE/Content");
-    Name cKeyName = Name(contentPrefix).append("C-KEY").append("1");
+    Name contentPrefix("/testname/content");
+    Namespace contentNamespace(contentPrefix, &keyChain);
 
-    Blob cKeyBlob = prepareData(prefix, userKeyName, cKeyName, *keyChain);
+    // We know the content has two segments.
+    MetaInfo metaInfo;
+    metaInfo.setFinalBlockId(Name().appendSegment(1)[0]);
+    contentNamespace.setNewDataMetaInfo(metaInfo);
+
+    Name ckPrefix("/some/ck/prefix");
+    ValidatorNull validator;
+    // Use a different Face so it can communicate with the primary Face.
+    Face accessManagerFace;
+    accessManagerFace.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
+    ptr_lib::shared_ptr<EncryptorV2> encryptor = prepareData
+      (ckPrefix, &keyChain, &face, &accessManagerFace, &validator);
 
     // Make the callback to produce a Data packet for a content segment.
-    TestProducer testProducer(contentPrefix, cKeyName, cKeyBlob, *keyChain);
-
-    prefix.addOnObjectNeeded
+    TestProducer testProducer(contentPrefix, encryptor.get(), &keyChain);
+    contentNamespace.addOnObjectNeeded
       (bind(&TestProducer::onObjectNeeded, &testProducer, _1, _2, _3));
 
-    cout << "Register prefix " << prefix.getName().toUri() << endl;
+    cout << "Register prefix " << contentNamespace.getName().toUri() << endl;
     // Set the face and register to receive Interests.
-    prefix.setFace
+    contentNamespace.setFace
       (&face, bind(&TestProducer::onRegisterFailed, &testProducer, _1));
 
     while (true) {
       face.processEvents();
+      accessManagerFace.processEvents();
       // We need to sleep for a few milliseconds so we don't use 100% of the CPU.
       usleep(10000);
     }
