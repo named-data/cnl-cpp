@@ -236,6 +236,15 @@ public:
   getDecryptionError() { return impl_->getDecryptionError(); }
 
   /**
+   * Get the signing error for when the state is set to
+   * NamespaceState_SIGNING_ERROR .
+   * @return The signing error, or "" if it hasn't been set due to a
+   * SIGNING_ERROR.
+   */
+  const std::string&
+  getSigningError() { return impl_->getSigningError(); }
+
+  /**
    * Check if this node in the namespace has the given child.
    * @param component The name component of the child.
    * @return True if this has a child with the name component.
@@ -297,6 +306,12 @@ public:
    */
   ndn::ptr_lib::shared_ptr<std::vector<ndn::Name::Component>>
   getChildComponents() { return impl_->getChildComponents(); }
+
+  void
+  serializeObject(const ndn::ptr_lib::shared_ptr<Object>& object)
+  {
+    impl_->serializeObject(object);
+  }
 
   /**
    * Attach the Data packet to this Namespace. This sets the state to
@@ -620,6 +635,9 @@ public:
     const std::string&
     getDecryptionError() { return decryptionError_; }
 
+    const std::string&
+    getSigningError() { return signingError_; }
+
     bool
     hasChild(const ndn::Name::Component& component) const
     {
@@ -645,6 +663,9 @@ public:
 
     ndn::ptr_lib::shared_ptr<std::vector<ndn::Name::Component>>
     getChildComponents();
+
+    void
+    serializeObject(const ndn::ptr_lib::shared_ptr<Object>& object);
 
     void
     setData(const ndn::ptr_lib::shared_ptr<ndn::Data>& data);
@@ -862,6 +883,7 @@ public:
     ndn::ptr_lib::shared_ptr<ndn::MetaInfo> newDataMetaInfo_;
     ndn::DecryptorV2* decryptor_;
     std::string decryptionError_;
+    std::string signingError_;
     ndn::ptr_lib::shared_ptr<Handler> handler_;
     // The key is the callback ID. The value is the OnStateChanged function.
     std::map<uint64_t, OnStateChanged> onStateChangedCallbacks_;

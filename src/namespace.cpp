@@ -144,6 +144,53 @@ Namespace::Impl::getChildComponents()
 }
 
 void
+Namespace::Impl::serializeObject(const ndn::ptr_lib::shared_ptr<Object>& object)
+{
+  // TODO: What if this node already has a _data and/or _object?
+
+  // TODO: Call handler canSerialize and set state SERIALIZING.
+  // (Does this happen in a different place from onObjectNeeded?)
+  // (If the handler can't serialize and this node has children, should abort?)
+
+  BlobObject* blobObject = dynamic_cast<BlobObject*>(object.get());
+  if (!blobObject)
+      throw runtime_error
+        ("serializeObject: For the default serialize, the object must be a Blob");
+
+  KeyChain* keyChain = getKeyChain();
+  if (!keyChain)
+    throw runtime_error
+      ("serializeObject: There is no KeyChain, so can't serialize " +
+       name_.toUri());
+
+  // TODO: Encrypt and set state ENCRYPTING.
+
+  // Prepare the Data packet.
+  ptr_lib::shared_ptr<Data> data = ptr_lib::make_shared<Data>(name_);
+  data->setContent(blobObject->getBlob());
+  const MetaInfo* metaInfo = getNewDataMetaInfo();
+  if (metaInfo)
+    data->setMetaInfo(*metaInfo);
+
+  setState(NamespaceState_SIGNING);
+  try {
+    keyChain->sign(*data);
+  } catch (const std::exception& ex) {
+    signingError_ = string("Error signing the serialized Data: ") + ex.what();
+    setState(NamespaceState_SIGNING_ERROR);
+    return;
+  }
+
+  if (root_->impl_->pendingIncomingInterestTable_)
+    // Quickly send the Data packet to satisfy interest, before calling callbacks.
+    root_->impl_->pendingIncomingInterestTable_->satisfyInterests(*data);
+
+  data_ = data;
+  // This sets OBJECT_READY.
+  setObject(object);
+}
+
+void
 Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
 {
   if (data_)
