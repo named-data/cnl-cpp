@@ -190,7 +190,7 @@ static uint8_t MEMBER_PUBLIC_KEY[] = {
 static void
 onError(EncryptError::ErrorCode errorCode, const string& message)
 {
-  cout << "onErrpr: " << message << endl;
+  cout << "onError: " << message << endl;
 }
 
 /**
@@ -201,8 +201,7 @@ onError(EncryptError::ErrorCode errorCode, const string& message)
  */
 static ptr_lib::shared_ptr<EncryptorV2>
 prepareData
-  (const Name& ckPrefix, KeyChain* keyChain, Face* face, Face* accessManagerFace,
-   Validator* validator)
+  (const Name& ckPrefix, KeyChain* keyChain, Face* face, Validator* validator)
 {
   // Imitate test-encryptor-v2 and test-access-manager-v2 from the unit tests.
   ptr_lib::shared_ptr<PibIdentity> accessIdentity = keyChain->createIdentityV2
@@ -216,7 +215,7 @@ prepareData
   memberCertificate.setContent(Blob(MEMBER_PUBLIC_KEY, sizeof(MEMBER_PUBLIC_KEY)));
 
   Name dataset("/dataset");
-  AccessManagerV2 accessManager(accessIdentity, dataset, keyChain, accessManagerFace);
+  AccessManagerV2 accessManager(accessIdentity, dataset, keyChain, face);
   // The face now has callbacks to the AccessManagerV2 and will keep it alive.
   accessManager.addMember(memberCertificate);
 
@@ -301,6 +300,9 @@ int main(int argc, char** argv)
        Blob(DEFAULT_RSA_PRIVATE_KEY_DER, sizeof(DEFAULT_RSA_PRIVATE_KEY_DER)),
        Blob(DEFAULT_RSA_PUBLIC_KEY_DER, sizeof(DEFAULT_RSA_PUBLIC_KEY_DER))));
     face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
+    // Enable Interest loopback so that the EncryptorV2 can fetch Data packets
+    // from the AccessManagerV2.
+    face.setInterestLoopbackEnabled(true);
 
     Name contentPrefix("/testname/content");
     Namespace contentNamespace(contentPrefix, &keyChain);
@@ -312,11 +314,8 @@ int main(int argc, char** argv)
 
     Name ckPrefix("/some/ck/prefix");
     ValidatorNull validator;
-    // Use a different Face so it can communicate with the primary Face.
-    Face accessManagerFace;
-    accessManagerFace.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
     ptr_lib::shared_ptr<EncryptorV2> encryptor = prepareData
-      (ckPrefix, &keyChain, &face, &accessManagerFace, &validator);
+      (ckPrefix, &keyChain, &face, &validator);
 
     // Make the callback to produce a Data packet for a content segment.
     TestProducer testProducer(contentPrefix, encryptor.get(), &keyChain);
@@ -330,7 +329,6 @@ int main(int argc, char** argv)
 
     while (true) {
       face.processEvents();
-      accessManagerFace.processEvents();
       // We need to sleep for a few milliseconds so we don't use 100% of the CPU.
       usleep(10000);
     }
