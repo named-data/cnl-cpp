@@ -27,7 +27,6 @@ noinst_PROGRAMS = bin/test-nac-consumer bin/test-nac-producer bin/test-segmented
 cnl_cpp_cpp_headers = \
   include/cnl-cpp/blob-object.hpp \
   include/cnl-cpp/object.hpp \
-  include/cnl-cpp/nac-consumer-handle.hpp \
   include/cnl-cpp/namespace.hpp \
   include/cnl-cpp/segment-stream-handler.hpp \
   include/cnl-cpp/segmented-object-handler.hpp
@@ -35,7 +34,6 @@ cnl_cpp_cpp_headers = \
 # C++ code.
 libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
   src/object.cpp \
-  src/nac-consumer-handle.cpp \
   src/namespace.cpp \
   src/segment-stream-handler.cpp \
   src/segmented-object-handler.cpp \

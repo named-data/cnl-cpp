@@ -151,8 +151,8 @@ libcnl_cpp_la_LIBADD =
 am__objects_1 =
 am__dirstamp = $(am__leading_dot)dirstamp
 am_libcnl_cpp_la_OBJECTS = $(am__objects_1) src/object.lo \
-	src/nac-consumer-handle.lo src/namespace.lo \
-	src/segment-stream-handler.lo src/segmented-object-handler.lo \
+	src/namespace.lo src/segment-stream-handler.lo \
+	src/segmented-object-handler.lo \
 	src/impl/pending-incoming-interest-table.lo
 libcnl_cpp_la_OBJECTS = $(am_libcnl_cpp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -189,7 +189,6 @@ am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = examples/$(DEPDIR)/test-nac-consumer.Po \
 	examples/$(DEPDIR)/test-nac-producer.Po \
 	examples/$(DEPDIR)/test-segmented.Po \
-	src/$(DEPDIR)/nac-consumer-handle.Plo \
 	src/$(DEPDIR)/namespace.Plo src/$(DEPDIR)/object.Plo \
 	src/$(DEPDIR)/segment-stream-handler.Plo \
 	src/$(DEPDIR)/segmented-object-handler.Plo \
@@ -525,7 +524,6 @@ pkgconfig_DATA = libcnl-cpp.pc
 cnl_cpp_cpp_headers = \
   include/cnl-cpp/blob-object.hpp \
   include/cnl-cpp/object.hpp \
-  include/cnl-cpp/nac-consumer-handle.hpp \
   include/cnl-cpp/namespace.hpp \
   include/cnl-cpp/segment-stream-handler.hpp \
   include/cnl-cpp/segmented-object-handler.hpp
@@ -534,7 +532,6 @@ cnl_cpp_cpp_headers = \
 # C++ code.
 libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
   src/object.cpp \
-  src/nac-consumer-handle.cpp \
   src/namespace.cpp \
   src/segment-stream-handler.cpp \
   src/segmented-object-handler.cpp \
@@ -639,8 +636,6 @@ src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: > src/$(DEPDIR)/$(am__dirstamp)
 src/object.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/nac-consumer-handle.lo: src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
 src/namespace.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/segment-stream-handler.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
@@ -699,7 +694,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-consumer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-producer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-segmented.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/nac-consumer-handle.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/namespace.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/object.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/segment-stream-handler.Plo@am__quote@ # am--include-marker
@@ -1121,7 +1115,6 @@ distclean: distclean-recursive
 		-rm -f examples/$(DEPDIR)/test-nac-consumer.Po
 	-rm -f examples/$(DEPDIR)/test-nac-producer.Po
 	-rm -f examples/$(DEPDIR)/test-segmented.Po
-	-rm -f src/$(DEPDIR)/nac-consumer-handle.Plo
 	-rm -f src/$(DEPDIR)/namespace.Plo
 	-rm -f src/$(DEPDIR)/object.Plo
 	-rm -f src/$(DEPDIR)/segment-stream-handler.Plo
@@ -1177,7 +1170,6 @@ maintainer-clean: maintainer-clean-recursive
 		-rm -f examples/$(DEPDIR)/test-nac-consumer.Po
 	-rm -f examples/$(DEPDIR)/test-nac-producer.Po
 	-rm -f examples/$(DEPDIR)/test-segmented.Po
-	-rm -f src/$(DEPDIR)/nac-consumer-handle.Plo
 	-rm -f src/$(DEPDIR)/namespace.Plo
 	-rm -f src/$(DEPDIR)/object.Plo
 	-rm -f src/$(DEPDIR)/segment-stream-handler.Plo
