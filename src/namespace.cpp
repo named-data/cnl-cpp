@@ -282,7 +282,10 @@ Namespace::Impl::setHandler(const ptr_lib::shared_ptr<Handler>& handler)
 void
 Namespace::Impl::objectNeeded()
 {
-  // Debug: Check if we already have the object. (But maybe not the data_?)
+  if (object_)
+    // We already have the object.
+    // Debug: (But maybe we don't have the _data and we need it?)
+    return;
 
   // Ask all OnObjectNeeded callbacks if they can produce.
   bool canProduce = false;
