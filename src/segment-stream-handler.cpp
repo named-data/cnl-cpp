@@ -31,13 +31,17 @@ INIT_LOGGER("cnl_cpp.SegmentStreamHandler");
 namespace cnl_cpp {
 
 void
-SegmentStreamHandler::onNamespaceSet() { impl_->onNamespaceSet(); }
+SegmentStreamHandler::onNamespaceSet()
+{ 
+  // Store getNamespace() in impl_. We do this instead of keeping a pointer to
+  // this outer Handler object since it might be destroyed.
+  impl_->onNamespaceSet(&getNamespace());
+}
 
-SegmentStreamHandler::Impl::Impl
-  (SegmentStreamHandler& outerHandler, const OnSegment& onSegment)
-: outerHandler_(outerHandler), maxRetrievedSegmentNumber_(-1),
-  didRequestFinalSegment_(false), finalSegmentNumber_(-1),
-  interestPipelineSize_(8), initialInterestCount_(1)
+SegmentStreamHandler::Impl::Impl(const OnSegment& onSegment)
+: maxRetrievedSegmentNumber_(-1), didRequestFinalSegment_(false),
+  finalSegmentNumber_(-1), interestPipelineSize_(8), initialInterestCount_(1),
+  namespace_(0)
 {
   if (onSegment)
     addOnSegment(onSegment);
@@ -74,11 +78,13 @@ SegmentStreamHandler::Impl::setInitialInterestCount(int initialInterestCount)
 }
 
 void
-SegmentStreamHandler::Impl::onNamespaceSet()
+SegmentStreamHandler::Impl::onNamespaceSet(Namespace* nameSpace)
 {
-  outerHandler_.getNamespace().addOnObjectNeeded
+  namespace_ = nameSpace;
+
+  namespace_->addOnObjectNeeded
     (bind(&SegmentStreamHandler::Impl::onObjectNeeded, shared_from_this(), _1, _2, _3));
-  outerHandler_.getNamespace().addOnStateChanged
+  namespace_->addOnStateChanged
     (bind(&SegmentStreamHandler::Impl::onStateChanged, shared_from_this(), _1, _2, _3, _4));
 }
 
@@ -114,10 +120,10 @@ SegmentStreamHandler::Impl::onStateChanged
    uint64_t callbackId)
 {
   if (!(changedNamespace.getName().size() >=
-          outerHandler_.getNamespace().getName().size() + 1 &&
+          namespace_->getName().size() + 1 &&
         state == NamespaceState_OBJECT_READY &&
         changedNamespace.getName()[
-          outerHandler_.getNamespace().getName().size()].isSegment()))
+          namespace_->getName().size()].isSegment()))
     // Not a segment, ignore.
     return;
 
@@ -130,7 +136,7 @@ SegmentStreamHandler::Impl::onStateChanged
   while (true) {
     int nextSegmentNumber = maxRetrievedSegmentNumber_ + 1;
     Namespace& nextSegment = debugGetRightmostLeaf
-      (outerHandler_.getNamespace()[Name::Component::fromSegment(nextSegmentNumber)]);
+      ((*namespace_)[Name::Component::fromSegment(nextSegmentNumber)]);
     if (!nextSegment.getObject())
       break;
 
@@ -154,7 +160,7 @@ SegmentStreamHandler::Impl::requestNewSegments(int maxRequestedSegments)
     maxRequestedSegments = 1;
 
   ptr_lib::shared_ptr<vector<Name::Component>> childComponents =
-    outerHandler_.getNamespace().getChildComponents();
+    namespace_->getChildComponents();
   // First, count how many are already requested and not received.
   int nRequestedSegments = 0;
   for (vector<Name::Component>::iterator component = childComponents->begin();
@@ -163,7 +169,7 @@ SegmentStreamHandler::Impl::requestNewSegments(int maxRequestedSegments)
       // The namespace contains a child other than a segment. Ignore.
       continue;
 
-    Namespace& child = outerHandler_.getNamespace()[*component];
+    Namespace& child = (*namespace_)[*component];
     // Debug: Check the leaf for content, but use the immediate child
     // for _debugSegmentStreamDidExpressInterest.
     if (!debugGetRightmostLeaf(child).getObject() &&
@@ -182,7 +188,7 @@ SegmentStreamHandler::Impl::requestNewSegments(int maxRequestedSegments)
     if (finalSegmentNumber_ >= 0 && segmentNumber > finalSegmentNumber_)
       break;
 
-    Namespace& segment = outerHandler_.getNamespace()[
+    Namespace& segment = (*namespace_)[
       Name::Component::fromSegment(segmentNumber)];
     if (debugGetRightmostLeaf(segment).getObject() ||
         segment.getState() >= NamespaceState_INTEREST_EXPRESSED)
@@ -209,7 +215,7 @@ SegmentStreamHandler::Impl::fireOnSegment(Namespace* segmentNamespace)
     map<uint64_t, OnSegment>::iterator entry = onSegmentCallbacks_.find(keys[i]);
     if (entry != onSegmentCallbacks_.end()) {
       try {
-        entry->second(outerHandler_, segmentNamespace, entry->first);
+        entry->second(segmentNamespace, entry->first);
       } catch (const std::exception& ex) {
         _LOG_ERROR("SegmentStreamHandler::fireOnSegment: Error in onSegment: " <<
                    ex.what());

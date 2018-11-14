@@ -32,24 +32,27 @@ namespace cnl_cpp {
  */
 class SegmentedObjectHandler : public SegmentStreamHandler {
 public:
-  typedef ndn::func_lib::function<void
-    (SegmentedObjectHandler& handler, ndn::Blob contentBlob)> OnSegmentedObject;
+  typedef ndn::func_lib::function<void(ndn::Blob contentBlob)> OnSegmentedObject;
 
   /**
    * Create a SegmentedObjectHandler with the optional onSegmentedObject callback.
    * @param onSegmentedObject (optional) When the child segments are assembled
-   * into a single block of memory, this calls onSegmentedObject(handler, contentBlob)
-   * where handler is this SegmentedObjectHandler and contentBlob is the Blob
-   * assembled from the contents. If you don't supply an onSegmentedObject
-   * callback here, you can call addOnStateChanged on the Namespace object to
-   * which this is attached and listen for the OBJECT_READY state.
+   * into a single block of memory, this calls onSegmentedObject(contentBlob)
+   * where contentBlob is the Blob assembled from the contents. If you don't
+   * supply an onSegmentedObject callback here, you can call addOnStateChanged
+   * on the Namespace object to which this is attached and listen for the
+   * OBJECT_READY state.
    */
   SegmentedObjectHandler
     (const OnSegmentedObject& onSegmentedObject = OnSegmentedObject())
-  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, onSegmentedObject))
+  : impl_(ndn::ptr_lib::make_shared<Impl>(onSegmentedObject))
   {
-    impl_->initialize();
+    impl_->initialize(this);
   }
+
+protected:
+  virtual void
+  onNamespaceSet();
 
 private:
   /**
@@ -62,32 +65,31 @@ private:
     /**
      * Create a new Impl, which should belong to a shared_ptr, then call
      * initialize().
-     * @param outerHandler The SegmentedObjectHandler which is creating this
-     * inner Impl.
      * @param onSegmentedObject See the SegmentedObjectHandler constructor.
      */
-    Impl
-      (SegmentedObjectHandler& outerHandler,
-       const OnSegmentedObject& onSegmentedObject);
+    Impl(const OnSegmentedObject& onSegmentedObject);
 
     /**
      * Complete the work of the constructor. This is needed because we can't
      * call shared_from_this() in the constructor.
+     * @param outerHandler A pointer to the outer handler which shouldn't be
+     * saved since it might be destroyed later.
      */
     void
-    initialize();
+    initialize(SegmentedObjectHandler* outerHandler);
+
+    void
+    setNamespace(Namespace* nameSpace) { namespace_ = nameSpace; }
 
   private:
     void
-    onSegment
-      (SegmentStreamHandler& handler, Namespace* segmentNamespace,
-       uint64_t callbackId);
+    onSegment(Namespace* segmentNamespace, uint64_t callbackId);
 
-    SegmentedObjectHandler& outerHandler_;
     bool finished_;
     std::vector<ndn::Blob> segments_;
     size_t totalSize_;
     OnSegmentedObject onSegmentedObject_;
+    Namespace* namespace_;
   };
 
   ndn::ptr_lib::shared_ptr<Impl> impl_;

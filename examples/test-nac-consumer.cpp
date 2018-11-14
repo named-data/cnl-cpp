@@ -141,8 +141,7 @@ static uint8_t MEMBER_PRIVATE_KEY[] = {
 };
 
 static void
-onSegmentedObject
-  (SegmentedObjectHandler& handler, Blob contentBlob, bool* enabled);
+onSegmentedObject(Blob contentBlob, bool* enabled);
 
 int main(int argc, char** argv)
 {
@@ -171,7 +170,7 @@ int main(int argc, char** argv)
     bool enabled = true;
     ptr_lib::shared_ptr<SegmentedObjectHandler> segmentedHandler =
       ptr_lib::make_shared<SegmentedObjectHandler>
-        (bind(&onSegmentedObject, _1, _2, &enabled));
+        (bind(&onSegmentedObject, _1, &enabled));
     contentNamespace.setHandler(segmentedHandler).objectNeeded();
 
     while (enabled) {
@@ -188,13 +187,11 @@ int main(int argc, char** argv)
 /**
  * This is called to print the content after it is decrypted and re-assembled
  * from segments.
- * @param handler The SegmentedObjectHandler.
  * @param contentBlob The Blob assembled from the contents.
  * @param enabled On success or error, set *enabled = false.
  */
 static void
-onSegmentedObject
-  (SegmentedObjectHandler& handler, Blob contentBlob, bool* enabled)
+onSegmentedObject(Blob contentBlob, bool* enabled)
 {
   cout << "Got segmented content " << contentBlob.toRawStr() << endl;
   *enabled = false;

@@ -33,8 +33,7 @@ namespace cnl_cpp {
 class SegmentStreamHandler : public Namespace::Handler {
 public:
   typedef ndn::func_lib::function<void
-    (SegmentStreamHandler& handler, Namespace* segmentNamespace,
-     uint64_t callbackId)> OnSegment;
+    (Namespace* segmentNamespace, uint64_t callbackId)> OnSegment;
 
   /**
    * Create a SegmentStreamHandler with the optional onSegment callback.
@@ -42,7 +41,7 @@ public:
    * You may also call addOnSegment directly.
    */
   SegmentStreamHandler(const OnSegment& onSegment = OnSegment())
-  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, onSegment))
+  : impl_(ndn::ptr_lib::make_shared<Impl>(onSegment))
   {
   }
 
@@ -50,12 +49,11 @@ public:
    * Add an onSegment callback. When a new segment is available, this calls
    * onSegment as described below. Segments are supplied in order.
    * @param onSegment This calls
-   * onSegment(handler, segmentNamespace, callbackId) where handler is this
-   * SegmentStreamHandler, segmentNamespace is the Namespace where you can use
-   * segmentNamespace.getObject(), and callbackId is the callback ID returned by
-   * this method. You must check if segmentNamespace is null because after
-   * supplying the final segment, this calls
-   * onSegment(handler, null, callbackId) to signal the "end of stream".
+   * onSegment(segmentNamespace, callbackId) segmentNamespace is the Namespace
+   * where you can use segmentNamespace.getObject(), and callbackId is the
+   * callback ID returned by this method. You must check if segmentNamespace is
+   * null because after supplying the final segment, this calls
+   * onSegment(null, callbackId) to signal the "end of stream".
    * NOTE: The library will log any exceptions thrown by this callback, but for
    * better error handling the callback should catch and properly handle any
    * exceptions.
@@ -132,13 +130,9 @@ private:
   public:
     /**
      * Create a new Impl, which should belong to a shared_ptr.
-     * @param outerHandler The SegmentStreamHandler which is creating this inner
-     * Impl.
      * @param onSegment See the SegmentStreamHandler constructor.
      */
-    Impl
-      (SegmentStreamHandler& outerHandler,
-       const OnSegment& onSegment);
+    Impl(const OnSegment& onSegment);
 
     uint64_t
     addOnSegment(const OnSegment& onSegment);
@@ -159,7 +153,7 @@ private:
     setInitialInterestCount(int initialInterestCount);
 
     void
-    onNamespaceSet();
+    onNamespaceSet(Namespace* nameSpace);
 
   private:
     /**
@@ -194,7 +188,6 @@ private:
     void
     fireOnSegment(Namespace* segmentNamespace);
 
-    SegmentStreamHandler& outerHandler_;
     int maxRetrievedSegmentNumber_;
     bool didRequestFinalSegment_;
     int finalSegmentNumber_;
@@ -202,6 +195,7 @@ private:
     int initialInterestCount_;
     // The key is the callback ID. The value is the OnSegment function.
     std::map<uint64_t, OnSegment> onSegmentCallbacks_;
+    Namespace* namespace_;
   };
 
   ndn::ptr_lib::shared_ptr<Impl> impl_;

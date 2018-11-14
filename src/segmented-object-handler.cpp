@@ -28,25 +28,33 @@ using namespace ndn::func_lib;
 
 namespace cnl_cpp {
 
-SegmentedObjectHandler::Impl::Impl
-  (SegmentedObjectHandler& outerHandler,
-   const OnSegmentedObject& onSegmentedObject)
-: outerHandler_(outerHandler), finished_(false), totalSize_(0),
-  onSegmentedObject_(onSegmentedObject)
+void
+SegmentedObjectHandler::onNamespaceSet()
+{
+  // Call the base class method.
+  SegmentStreamHandler::onNamespaceSet();
+
+  // Store getNamespace() in impl_. We do this instead of keeping a pointer to
+  // this outer Handler object since it might be destroyed.
+  impl_->setNamespace(&getNamespace());
+}
+
+SegmentedObjectHandler::Impl::Impl(const OnSegmentedObject& onSegmentedObject)
+: finished_(false), totalSize_(0), onSegmentedObject_(onSegmentedObject),
+  namespace_(0)
 {
 }
 
 void
-SegmentedObjectHandler::Impl::initialize()
+SegmentedObjectHandler::Impl::initialize(SegmentedObjectHandler* outerHandler)
 {
-  outerHandler_.addOnSegment
-    (bind(&SegmentedObjectHandler::Impl::onSegment, shared_from_this(), _1, _2, _3));
+  outerHandler->addOnSegment
+    (bind(&SegmentedObjectHandler::Impl::onSegment, shared_from_this(), _1, _2));
 }
 
 void
 SegmentedObjectHandler::Impl::onSegment
-  (SegmentStreamHandler& handler, Namespace* segmentNamespace,
-   uint64_t callbackId)
+  (Namespace* segmentNamespace, uint64_t callbackId)
 {
   if (finished_)
     // We already finished and called onContent. (We don't expect this.)
@@ -74,11 +82,10 @@ SegmentedObjectHandler::Impl::onSegment
       finished_ = true;
 
       Blob contentBlob = Blob(content, false);
-      outerHandler_.getNamespace().setObject
-         (ptr_lib::make_shared<BlobObject>(contentBlob));
+      namespace_->setObject(ptr_lib::make_shared<BlobObject>(contentBlob));
 
       if (onSegmentedObject_)
-        onSegmentedObject_(outerHandler_, contentBlob);
+        onSegmentedObject_(contentBlob);
   }
 }
 
