@@ -215,7 +215,7 @@ SegmentStreamHandler::Impl::fireOnSegment(Namespace* segmentNamespace)
     map<uint64_t, OnSegment>::iterator entry = onSegmentCallbacks_.find(keys[i]);
     if (entry != onSegmentCallbacks_.end()) {
       try {
-        entry->second(segmentNamespace, entry->first);
+        entry->second(segmentNamespace);
       } catch (const std::exception& ex) {
         _LOG_ERROR("SegmentStreamHandler::fireOnSegment: Error in onSegment: " <<
                    ex.what());

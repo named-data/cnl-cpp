@@ -83,7 +83,7 @@ private:
 
   private:
     void
-    onSegment(Namespace* segmentNamespace, uint64_t callbackId);
+    onSegment(Namespace* segmentNamespace);
 
     bool finished_;
     std::vector<ndn::Blob> segments_;

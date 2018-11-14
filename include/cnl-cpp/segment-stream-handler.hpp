@@ -32,8 +32,7 @@ namespace cnl_cpp {
  */
 class SegmentStreamHandler : public Namespace::Handler {
 public:
-  typedef ndn::func_lib::function<void
-    (Namespace* segmentNamespace, uint64_t callbackId)> OnSegment;
+  typedef ndn::func_lib::function<void(Namespace* segmentNamespace)> OnSegment;
 
   /**
    * Create a SegmentStreamHandler with the optional onSegment callback.
@@ -49,11 +48,10 @@ public:
    * Add an onSegment callback. When a new segment is available, this calls
    * onSegment as described below. Segments are supplied in order.
    * @param onSegment This calls
-   * onSegment(segmentNamespace, callbackId) segmentNamespace is the Namespace
-   * where you can use segmentNamespace.getObject(), and callbackId is the
-   * callback ID returned by this method. You must check if segmentNamespace is
-   * null because after supplying the final segment, this calls
-   * onSegment(null, callbackId) to signal the "end of stream".
+   * onSegment(segmentNamespace) where segmentNamespace is the Namespace where
+   * you can use segmentNamespace.getObject(). You must check if
+   * segmentNamespace is null because after supplying the final segment, this
+   * calls onSegment(null) to signal the "end of stream".
    * NOTE: The library will log any exceptions thrown by this callback, but for
    * better error handling the callback should catch and properly handle any
    * exceptions.

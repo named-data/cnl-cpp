@@ -49,12 +49,11 @@ void
 SegmentedObjectHandler::Impl::initialize(SegmentedObjectHandler* outerHandler)
 {
   outerHandler->addOnSegment
-    (bind(&SegmentedObjectHandler::Impl::onSegment, shared_from_this(), _1, _2));
+    (bind(&SegmentedObjectHandler::Impl::onSegment, shared_from_this(), _1));
 }
 
 void
-SegmentedObjectHandler::Impl::onSegment
-  (Namespace* segmentNamespace, uint64_t callbackId)
+SegmentedObjectHandler::Impl::onSegment(Namespace* segmentNamespace)
 {
   if (finished_)
     // We already finished and called onContent. (We don't expect this.)
