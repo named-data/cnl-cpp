@@ -83,9 +83,6 @@ public:
     (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
      uint64_t callbackId)> OnStateChanged;
 
-  typedef ndn::func_lib::function<void
-    (const ndn::ptr_lib::shared_ptr<Object>& object)> OnDeserialized;
-
   typedef ndn::func_lib::function<bool
     (Namespace& nameSpace, Namespace& neededNamespace,
      uint64_t callbackId)> OnObjectNeeded;
@@ -98,6 +95,9 @@ public:
    */
   class Handler {
   public:
+    typedef ndn::func_lib::function<void
+      (const ndn::ptr_lib::shared_ptr<Object>& object)> OnDeserialized;
+
     Handler()
     : namespace_(0)
     {}
