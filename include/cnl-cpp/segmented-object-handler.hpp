@@ -27,7 +27,7 @@
 namespace cnl_cpp {
 
 /**
- * SegmentedObjectHandler class extends SegmentStreamHandler and assembles the
+ * SegmentedObjectHandler extends SegmentStreamHandler and assembles the
  * contents of child segments into a single block of memory.
  */
 class SegmentedObjectHandler : public SegmentStreamHandler {
@@ -52,7 +52,13 @@ public:
 
 protected:
   virtual void
-  onNamespaceSet();
+  onNamespaceSet()
+  {
+    // Call the base class method.
+    SegmentStreamHandler::onNamespaceSet();
+
+    impl_->onNamespaceSet(&getNamespace());
+  }
 
 private:
   /**
@@ -79,7 +85,12 @@ private:
     initialize(SegmentedObjectHandler* outerHandler);
 
     void
-    setNamespace(Namespace* nameSpace) { namespace_ = nameSpace; }
+    onNamespaceSet(Namespace* nameSpace)
+    {
+      // Store getNamespace() in impl_. We do this instead of keeping a pointer to
+      // this outer Handler object since it might be destroyed.
+      namespace_ = nameSpace;
+    }
 
   private:
     void

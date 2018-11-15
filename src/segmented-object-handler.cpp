@@ -28,17 +28,6 @@ using namespace ndn::func_lib;
 
 namespace cnl_cpp {
 
-void
-SegmentedObjectHandler::onNamespaceSet()
-{
-  // Call the base class method.
-  SegmentStreamHandler::onNamespaceSet();
-
-  // Store getNamespace() in impl_. We do this instead of keeping a pointer to
-  // this outer Handler object since it might be destroyed.
-  impl_->setNamespace(&getNamespace());
-}
-
 SegmentedObjectHandler::Impl::Impl(const OnSegmentedObject& onSegmentedObject)
 : finished_(false), totalSize_(0), onSegmentedObject_(onSegmentedObject),
   namespace_(0)
