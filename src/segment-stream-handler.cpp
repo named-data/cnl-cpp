@@ -100,20 +100,6 @@ SegmentStreamHandler::Impl::onObjectNeeded
   return true;
 }
 
-Namespace&
-SegmentStreamHandler::Impl::debugGetRightmostLeaf(Namespace& nameSpace)
-{
-  Namespace* result = &nameSpace;
-  while (true) {
-    ptr_lib::shared_ptr<vector<Name::Component>> childComponents =
-      result->getChildComponents();
-    if (childComponents->size() == 0)
-      return *result;
-
-    result = &result->getChild(childComponents->at(childComponents->size() - 1));
-  }
-}
-
 void
 SegmentStreamHandler::Impl::onStateChanged
   (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
@@ -135,8 +121,8 @@ SegmentStreamHandler::Impl::onStateChanged
   // Report as many segments as possible where the node already has content.
   while (true) {
     int nextSegmentNumber = maxRetrievedSegmentNumber_ + 1;
-    Namespace& nextSegment = debugGetRightmostLeaf
-      ((*namespace_)[Name::Component::fromSegment(nextSegmentNumber)]);
+    Namespace& nextSegment =
+      (*namespace_)[Name::Component::fromSegment(nextSegmentNumber)];
     if (!nextSegment.getObject())
       break;
 
@@ -170,9 +156,7 @@ SegmentStreamHandler::Impl::requestNewSegments(int maxRequestedSegments)
       continue;
 
     Namespace& child = (*namespace_)[*component];
-    // Debug: Check the leaf for content, but use the immediate child
-    // for _debugSegmentStreamDidExpressInterest.
-    if (!debugGetRightmostLeaf(child).getObject() &&
+    if (!child.getData() &&
         child.getState() >= NamespaceState_INTEREST_EXPRESSED) {
       ++nRequestedSegments;
       if (nRequestedSegments >= maxRequestedSegments)
@@ -190,7 +174,7 @@ SegmentStreamHandler::Impl::requestNewSegments(int maxRequestedSegments)
 
     Namespace& segment = (*namespace_)[
       Name::Component::fromSegment(segmentNumber)];
-    if (debugGetRightmostLeaf(segment).getObject() ||
+    if (segment.getData() ||
         segment.getState() >= NamespaceState_INTEREST_EXPRESSED)
       // Already got the data packet or already requested.
       continue;

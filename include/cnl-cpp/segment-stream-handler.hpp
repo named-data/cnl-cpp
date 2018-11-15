@@ -155,15 +155,6 @@ private:
 
   private:
     /**
-     * Get the rightmost leaf of the given namespace. Use this temporarily to
-     * handle encrypted data packets where the name has the key name appended.
-     * @param nameSpace The Namespace with the leaf node.
-     * @return The leaf Namespace node.
-     */
-    static Namespace&
-    debugGetRightmostLeaf(Namespace& nameSpace);
-
-    /**
      * Start fetching segment Data packets and adding them as children of
      * getNamespace(), calling any onSegment callbacks in order as the
      * segments are received. Even though the segments supplied to onSegment are
