@@ -20,7 +20,9 @@ lib_LTLIBRARIES = libcnl-cpp.la
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcnl-cpp.pc
 
-noinst_PROGRAMS = bin/test-nac-consumer bin/test-nac-producer bin/test-segmented
+noinst_PROGRAMS = bin/test-generalized-object-consumer \
+  bin/test-generalized-object-producer bin/test-nac-consumer \
+  bin/test-nac-producer bin/test-segmented
 
 # Public C++ headers.
 # NOTE: If a new directory is added, then add it to cnl_cpp_cpp_headers in include/Makefile.am.
@@ -29,7 +31,9 @@ cnl_cpp_cpp_headers = \
   include/cnl-cpp/object.hpp \
   include/cnl-cpp/namespace.hpp \
   include/cnl-cpp/segment-stream-handler.hpp \
-  include/cnl-cpp/segmented-object-handler.hpp
+  include/cnl-cpp/segmented-object-handler.hpp \
+  include/cnl-cpp/generalized-object/content-meta-info-object.hpp \
+  include/cnl-cpp/generalized-object/generalized-object-handler.hpp
 
 # C++ code.
 libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
@@ -37,8 +41,15 @@ libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
   src/namespace.cpp \
   src/segment-stream-handler.cpp \
   src/segmented-object-handler.cpp \
+  src//generalized-object/generalized-object-handler.cpp \
   src/impl/pending-incoming-interest-table.cpp \
   src/impl/pending-incoming-interest-table.hpp
+
+bin_test_generalized_object_consumer_SOURCES = examples/test-generalized-object-consumer.cpp
+bin_test_generalized_object_consumer_LDADD = libcnl-cpp.la
+
+bin_test_generalized_object_producer_SOURCES = examples/test-generalized-object-producer.cpp
+bin_test_generalized_object_producer_LDADD = libcnl-cpp.la
 
 bin_test_nac_consumer_SOURCES = examples/test-nac-consumer.cpp
 bin_test_nac_consumer_LDADD = libcnl-cpp.la

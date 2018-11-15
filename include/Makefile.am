@@ -7,6 +7,7 @@
 # Public C++ headers.
 # Use cnl-cpp/*.hpp instead of *.* to not overwrite *.h from above.
 cnl_cpp_cpp_headers = \
-  $(wildcard cnl-cpp/*.hpp)
+  $(wildcard cnl-cpp/*.hpp) \
+  $(wildcard cnl-cpp/generalized-object/*.hpp)
 
 nobase_include_HEADERS = $(cnl_cpp_cpp_headers)

@@ -27,6 +27,9 @@
 /* Define to 1 if you have the `ndn-cpp' library (-lndn-cpp). */
 #undef HAVE_LIBNDN_CPP
 
+/* Define to 1 if you have the `ndn-cpp-tools' library (-lndn-cpp-tools). */
+#undef HAVE_LIBNDN_CPP_TOOLS
+
 /* Define to 1 if you have the `protobuf' library (-lprotobuf). */
 #undef HAVE_LIBPROTOBUF
 

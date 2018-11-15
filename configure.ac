@@ -78,6 +78,10 @@ AC_CHECK_LIB([crypto], [EVP_EncryptInit], [],
 AC_CHECK_LIB([ndn-cpp], [ndn_getErrorString], [],
              [AC_MSG_FAILURE([can't find the ndn-cpp library])])
 
+# Require libndn-cpp-tools.
+AC_CHECK_LIB([ndn-cpp-tools], [ndntools_getGeneralizedContentMetaComponent], [],
+             [AC_MSG_FAILURE([can't find the ndn-cpp-tools library])])
+
 # Conditionally use libsqlite3.  AX_LIB_SQLITE3 defines HAVE_SQLITE3 in confdefs.h .
 AX_LIB_SQLITE3()
 if grep -q "#define HAVE_SQLITE3" confdefs.h ; then

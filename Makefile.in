@@ -93,8 +93,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-noinst_PROGRAMS = bin/test-nac-consumer$(EXEEXT) \
-	bin/test-nac-producer$(EXEEXT) bin/test-segmented$(EXEEXT)
+noinst_PROGRAMS = bin/test-generalized-object-consumer$(EXEEXT) \
+	bin/test-generalized-object-producer$(EXEEXT) \
+	bin/test-nac-consumer$(EXEEXT) bin/test-nac-producer$(EXEEXT) \
+	bin/test-segmented$(EXEEXT)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_boost_asio.m4 \
@@ -153,12 +155,23 @@ am__dirstamp = $(am__leading_dot)dirstamp
 am_libcnl_cpp_la_OBJECTS = $(am__objects_1) src/object.lo \
 	src/namespace.lo src/segment-stream-handler.lo \
 	src/segmented-object-handler.lo \
+	src//generalized-object/generalized-object-handler.lo \
 	src/impl/pending-incoming-interest-table.lo
 libcnl_cpp_la_OBJECTS = $(am_libcnl_cpp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+am_bin_test_generalized_object_consumer_OBJECTS =  \
+	examples/test-generalized-object-consumer.$(OBJEXT)
+bin_test_generalized_object_consumer_OBJECTS =  \
+	$(am_bin_test_generalized_object_consumer_OBJECTS)
+bin_test_generalized_object_consumer_DEPENDENCIES = libcnl-cpp.la
+am_bin_test_generalized_object_producer_OBJECTS =  \
+	examples/test-generalized-object-producer.$(OBJEXT)
+bin_test_generalized_object_producer_OBJECTS =  \
+	$(am_bin_test_generalized_object_producer_OBJECTS)
+bin_test_generalized_object_producer_DEPENDENCIES = libcnl-cpp.la
 am_bin_test_nac_consumer_OBJECTS =  \
 	examples/test-nac-consumer.$(OBJEXT)
 bin_test_nac_consumer_OBJECTS = $(am_bin_test_nac_consumer_OBJECTS)
@@ -186,12 +199,16 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = examples/$(DEPDIR)/test-nac-consumer.Po \
+am__depfiles_remade =  \
+	examples/$(DEPDIR)/test-generalized-object-consumer.Po \
+	examples/$(DEPDIR)/test-generalized-object-producer.Po \
+	examples/$(DEPDIR)/test-nac-consumer.Po \
 	examples/$(DEPDIR)/test-nac-producer.Po \
 	examples/$(DEPDIR)/test-segmented.Po \
 	src/$(DEPDIR)/namespace.Plo src/$(DEPDIR)/object.Plo \
 	src/$(DEPDIR)/segment-stream-handler.Plo \
 	src/$(DEPDIR)/segmented-object-handler.Plo \
+	src/generalized-object/$(DEPDIR)/generalized-object-handler.Plo \
 	src/impl/$(DEPDIR)/pending-incoming-interest-table.Plo
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -230,9 +247,14 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libcnl_cpp_la_SOURCES) $(bin_test_nac_consumer_SOURCES) \
+SOURCES = $(libcnl_cpp_la_SOURCES) \
+	$(bin_test_generalized_object_consumer_SOURCES) \
+	$(bin_test_generalized_object_producer_SOURCES) \
+	$(bin_test_nac_consumer_SOURCES) \
 	$(bin_test_nac_producer_SOURCES) $(bin_test_segmented_SOURCES)
 DIST_SOURCES = $(libcnl_cpp_la_SOURCES) \
+	$(bin_test_generalized_object_consumer_SOURCES) \
+	$(bin_test_generalized_object_producer_SOURCES) \
 	$(bin_test_nac_consumer_SOURCES) \
 	$(bin_test_nac_producer_SOURCES) $(bin_test_segmented_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
@@ -526,7 +548,9 @@ cnl_cpp_cpp_headers = \
   include/cnl-cpp/object.hpp \
   include/cnl-cpp/namespace.hpp \
   include/cnl-cpp/segment-stream-handler.hpp \
-  include/cnl-cpp/segmented-object-handler.hpp
+  include/cnl-cpp/segmented-object-handler.hpp \
+  include/cnl-cpp/generalized-object/content-meta-info-object.hpp \
+  include/cnl-cpp/generalized-object/generalized-object-handler.hpp
 
 
 # C++ code.
@@ -535,9 +559,14 @@ libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
   src/namespace.cpp \
   src/segment-stream-handler.cpp \
   src/segmented-object-handler.cpp \
+  src//generalized-object/generalized-object-handler.cpp \
   src/impl/pending-incoming-interest-table.cpp \
   src/impl/pending-incoming-interest-table.hpp
 
+bin_test_generalized_object_consumer_SOURCES = examples/test-generalized-object-consumer.cpp
+bin_test_generalized_object_consumer_LDADD = libcnl-cpp.la
+bin_test_generalized_object_producer_SOURCES = examples/test-generalized-object-producer.cpp
+bin_test_generalized_object_producer_LDADD = libcnl-cpp.la
 bin_test_nac_consumer_SOURCES = examples/test-nac-consumer.cpp
 bin_test_nac_consumer_LDADD = libcnl-cpp.la
 bin_test_nac_producer_SOURCES = examples/test-nac-producer.cpp
@@ -641,6 +670,15 @@ src/segment-stream-handler.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/segmented-object-handler.lo: src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/generalized-object/$(am__dirstamp):
+	@$(MKDIR_P) src//generalized-object
+	@: > src/generalized-object/$(am__dirstamp)
+src/generalized-object/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src//generalized-object/$(DEPDIR)
+	@: > src/generalized-object/$(DEPDIR)/$(am__dirstamp)
+src//generalized-object/generalized-object-handler.lo:  \
+	src/generalized-object/$(am__dirstamp) \
+	src/generalized-object/$(DEPDIR)/$(am__dirstamp)
 src/impl/$(am__dirstamp):
 	@$(MKDIR_P) src/impl
 	@: > src/impl/$(am__dirstamp)
@@ -658,11 +696,23 @@ examples/$(am__dirstamp):
 examples/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) examples/$(DEPDIR)
 	@: > examples/$(DEPDIR)/$(am__dirstamp)
-examples/test-nac-consumer.$(OBJEXT): examples/$(am__dirstamp) \
-	examples/$(DEPDIR)/$(am__dirstamp)
+examples/test-generalized-object-consumer.$(OBJEXT):  \
+	examples/$(am__dirstamp) examples/$(DEPDIR)/$(am__dirstamp)
 bin/$(am__dirstamp):
 	@$(MKDIR_P) bin
 	@: > bin/$(am__dirstamp)
+
+bin/test-generalized-object-consumer$(EXEEXT): $(bin_test_generalized_object_consumer_OBJECTS) $(bin_test_generalized_object_consumer_DEPENDENCIES) $(EXTRA_bin_test_generalized_object_consumer_DEPENDENCIES) bin/$(am__dirstamp)
+	@rm -f bin/test-generalized-object-consumer$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(bin_test_generalized_object_consumer_OBJECTS) $(bin_test_generalized_object_consumer_LDADD) $(LIBS)
+examples/test-generalized-object-producer.$(OBJEXT):  \
+	examples/$(am__dirstamp) examples/$(DEPDIR)/$(am__dirstamp)
+
+bin/test-generalized-object-producer$(EXEEXT): $(bin_test_generalized_object_producer_OBJECTS) $(bin_test_generalized_object_producer_DEPENDENCIES) $(EXTRA_bin_test_generalized_object_producer_DEPENDENCIES) bin/$(am__dirstamp)
+	@rm -f bin/test-generalized-object-producer$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(bin_test_generalized_object_producer_OBJECTS) $(bin_test_generalized_object_producer_LDADD) $(LIBS)
+examples/test-nac-consumer.$(OBJEXT): examples/$(am__dirstamp) \
+	examples/$(DEPDIR)/$(am__dirstamp)
 
 bin/test-nac-consumer$(EXEEXT): $(bin_test_nac_consumer_OBJECTS) $(bin_test_nac_consumer_DEPENDENCIES) $(EXTRA_bin_test_nac_consumer_DEPENDENCIES) bin/$(am__dirstamp)
 	@rm -f bin/test-nac-consumer$(EXEEXT)
@@ -685,12 +735,16 @@ mostlyclean-compile:
 	-rm -f examples/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/*.lo
+	-rm -f src//generalized-object/*.$(OBJEXT)
+	-rm -f src//generalized-object/*.lo
 	-rm -f src/impl/*.$(OBJEXT)
 	-rm -f src/impl/*.lo
 
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-generalized-object-consumer.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-generalized-object-producer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-consumer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-producer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-segmented.Po@am__quote@ # am--include-marker
@@ -698,6 +752,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/object.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/segment-stream-handler.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/segmented-object-handler.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/generalized-object/$(DEPDIR)/generalized-object-handler.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/impl/$(DEPDIR)/pending-incoming-interest-table.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -737,6 +792,7 @@ clean-libtool:
 	-rm -rf .libs _libs
 	-rm -rf bin/.libs bin/_libs
 	-rm -rf src/.libs src/_libs
+	-rm -rf src//generalized-object/.libs src//generalized-object/_libs
 	-rm -rf src/impl/.libs src/impl/_libs
 
 distclean-libtool:
@@ -1099,6 +1155,8 @@ distclean-generic:
 	-rm -f examples/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/$(am__dirstamp)
+	-rm -f src/generalized-object/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/generalized-object/$(am__dirstamp)
 	-rm -f src/impl/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/impl/$(am__dirstamp)
 
@@ -1112,13 +1170,16 @@ clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-		-rm -f examples/$(DEPDIR)/test-nac-consumer.Po
+		-rm -f examples/$(DEPDIR)/test-generalized-object-consumer.Po
+	-rm -f examples/$(DEPDIR)/test-generalized-object-producer.Po
+	-rm -f examples/$(DEPDIR)/test-nac-consumer.Po
 	-rm -f examples/$(DEPDIR)/test-nac-producer.Po
 	-rm -f examples/$(DEPDIR)/test-segmented.Po
 	-rm -f src/$(DEPDIR)/namespace.Plo
 	-rm -f src/$(DEPDIR)/object.Plo
 	-rm -f src/$(DEPDIR)/segment-stream-handler.Plo
 	-rm -f src/$(DEPDIR)/segmented-object-handler.Plo
+	-rm -f src/generalized-object/$(DEPDIR)/generalized-object-handler.Plo
 	-rm -f src/impl/$(DEPDIR)/pending-incoming-interest-table.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -1167,13 +1228,16 @@ installcheck-am:
 maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-		-rm -f examples/$(DEPDIR)/test-nac-consumer.Po
+		-rm -f examples/$(DEPDIR)/test-generalized-object-consumer.Po
+	-rm -f examples/$(DEPDIR)/test-generalized-object-producer.Po
+	-rm -f examples/$(DEPDIR)/test-nac-consumer.Po
 	-rm -f examples/$(DEPDIR)/test-nac-producer.Po
 	-rm -f examples/$(DEPDIR)/test-segmented.Po
 	-rm -f src/$(DEPDIR)/namespace.Plo
 	-rm -f src/$(DEPDIR)/object.Plo
 	-rm -f src/$(DEPDIR)/segment-stream-handler.Plo
 	-rm -f src/$(DEPDIR)/segmented-object-handler.Plo
+	-rm -f src/generalized-object/$(DEPDIR)/generalized-object-handler.Plo
 	-rm -f src/impl/$(DEPDIR)/pending-incoming-interest-table.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
