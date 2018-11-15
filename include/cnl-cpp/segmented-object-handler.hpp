@@ -36,12 +36,9 @@ public:
 
   /**
    * Create a SegmentedObjectHandler with the optional onSegmentedObject callback.
-   * @param onSegmentedObject (optional) When the child segments are assembled
-   * into a single block of memory, this calls onSegmentedObject(contentBlob)
-   * where contentBlob is the Blob assembled from the contents. If you don't
-   * supply an onSegmentedObject callback here, you can call addOnStateChanged
-   * on the Namespace object to which this is attached and listen for the
-   * OBJECT_READY state.
+   * @param onSegmentedObject (optional) If supplied, this calls
+   * addOnSegmentedObject(onSegmentedObject). You may also call
+   * addOnSegmentedObject directly.
    */
   SegmentedObjectHandler
     (const OnSegmentedObject& onSegmentedObject = OnSegmentedObject())
@@ -49,6 +46,32 @@ public:
   {
     impl_->initialize(this);
   }
+
+  /**
+   * Add an OnSegmentedObject callback. When the child segments are assembled
+   * into a single block of memory, this calls onSegmentedObject as described
+   * below.
+   * @param onSegmentedObject This calls onSegmentedObject(contentBlob) where
+   * contentBlob is the Blob assembled from the contents.
+   * NOTE: The library will log any exceptions thrown by this callback, but for
+   * better error handling the callback should catch and properly handle any
+   * exceptions.
+   * @return The callback ID which you can use in removeCallback().
+   */
+  uint64_t
+  addOnSegmentedObject(const OnSegmentedObject& onSegmentedObject)
+  {
+    return impl_->addOnSegmentedObject(onSegmentedObject);
+  }
+
+  /**
+   * Remove the callback with the given callbackId. This does not search for the
+   * callbackId in child nodes. If the callbackId isn't found, do nothing.
+   * @param callbackId The callback ID returned, for example, from
+   * addOnSegmentedObject.
+   */
+  void
+  removeCallback(uint64_t callbackId) { impl_->removeCallback(callbackId); }
 
 protected:
   virtual void
@@ -84,6 +107,12 @@ private:
     void
     initialize(SegmentedObjectHandler* outerHandler);
 
+    uint64_t
+    addOnSegmentedObject(const OnSegmentedObject& onSegmentedObject);
+
+    void
+    removeCallback(uint64_t callbackId);
+
     void
     onNamespaceSet(Namespace* nameSpace)
     {
@@ -96,10 +125,14 @@ private:
     void
     onSegment(Namespace* segmentNamespace);
 
+    void
+    fireOnSegmentedObject(ndn::Blob contentBlob);
+
     bool finished_;
     std::vector<ndn::Blob> segments_;
     size_t totalSize_;
-    OnSegmentedObject onSegmentedObject_;
+    // The key is the callback ID. The value is the OnSegmentedObject function.
+    std::map<uint64_t, OnSegmentedObject> onSegmentedObjectCallbacks_;
     Namespace* namespace_;
   };
 

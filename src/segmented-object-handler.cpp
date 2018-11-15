@@ -19,6 +19,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+#include <ndn-cpp/util/logging.hpp>
 #include <memory.h>
 #include <cnl-cpp/segmented-object-handler.hpp>
 
@@ -26,12 +27,15 @@ using namespace std;
 using namespace ndn;
 using namespace ndn::func_lib;
 
+INIT_LOGGER("cnl_cpp.SegmentedObjectHandler");
+
 namespace cnl_cpp {
 
 SegmentedObjectHandler::Impl::Impl(const OnSegmentedObject& onSegmentedObject)
-: finished_(false), totalSize_(0), onSegmentedObject_(onSegmentedObject),
-  namespace_(0)
+: finished_(false), totalSize_(0), namespace_(0)
 {
+  if (onSegmentedObject)
+    addOnSegmentedObject(onSegmentedObject);
 }
 
 void
@@ -39,6 +43,21 @@ SegmentedObjectHandler::Impl::initialize(SegmentedObjectHandler* outerHandler)
 {
   outerHandler->addOnSegment
     (bind(&SegmentedObjectHandler::Impl::onSegment, shared_from_this(), _1));
+}
+
+uint64_t
+SegmentedObjectHandler::Impl::addOnSegmentedObject
+  (const OnSegmentedObject& onSegmentedObject)
+{
+  uint64_t callbackId = Namespace::getNextCallbackId();
+  onSegmentedObjectCallbacks_[callbackId] = onSegmentedObject;
+  return callbackId;
+}
+
+void
+SegmentedObjectHandler::Impl::removeCallback(uint64_t callbackId)
+{
+  onSegmentedObjectCallbacks_.erase(callbackId);
 }
 
 void
@@ -72,8 +91,35 @@ SegmentedObjectHandler::Impl::onSegment(Namespace* segmentNamespace)
       Blob contentBlob = Blob(content, false);
       namespace_->setObject(ptr_lib::make_shared<BlobObject>(contentBlob));
 
-      if (onSegmentedObject_)
-        onSegmentedObject_(contentBlob);
+      fireOnSegmentedObject(contentBlob);
+  }
+}
+
+void
+SegmentedObjectHandler::Impl::fireOnSegmentedObject(Blob contentBlob)
+{
+  // Copy the keys before iterating since callbacks can change the list.
+  vector<uint64_t> keys;
+  keys.reserve(onSegmentedObjectCallbacks_.size());
+  for (map<uint64_t, OnSegmentedObject>::iterator i =
+         onSegmentedObjectCallbacks_.begin();
+       i != onSegmentedObjectCallbacks_.end(); ++i)
+    keys.push_back(i->first);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    // A callback on a previous pass may have removed this callback, so check.
+    map<uint64_t, OnSegmentedObject>::iterator entry =
+      onSegmentedObjectCallbacks_.find(keys[i]);
+    if (entry != onSegmentedObjectCallbacks_.end()) {
+      try {
+        entry->second(contentBlob);
+      } catch (const std::exception& ex) {
+        _LOG_ERROR("SegmentStreamHandler::fireOnSegment: Error in onSegmentedObject: " <<
+                   ex.what());
+      } catch (...) {
+        _LOG_ERROR("SegmentStreamHandler::fireOnSegment: Error in onSegmentedObject.");
+      }
+    }
   }
 }
 
