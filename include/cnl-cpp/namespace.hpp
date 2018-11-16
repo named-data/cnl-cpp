@@ -314,9 +314,9 @@ public:
   }
 
   /**
-   * Attach the Data packet to this Namespace. This sets the state to
-   * DATA_RECEIVED and calls callbacks as described by addOnStateChanged.
-   * However, if a Data packet is already attached, do nothing.
+   * Attach the Data packet to this Namespace and satisfy pending Interests for
+   * it. However, if a Data packet is already attached, do nothing. This does
+   * not update the Namespace state.
    * @param data The Data packet object whose name must equal the name in this
    * Namespace node. To get the right Namespace, you can use
    * getChild(data.getName()). For efficiency, this does not copy the Data

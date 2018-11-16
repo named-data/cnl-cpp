@@ -22,8 +22,8 @@
 #include <sstream>
 #include <ndn-cpp/util/exponential-re-express.hpp>
 #include <ndn-cpp/util/logging.hpp>
-#include <cnl-cpp/namespace.hpp>
 #include "impl/pending-incoming-interest-table.hpp"
+#include <cnl-cpp/namespace.hpp>
 
 using namespace std;
 using namespace ndn;
@@ -181,11 +181,9 @@ Namespace::Impl::serializeObject(const ndn::ptr_lib::shared_ptr<Object>& object)
     return;
   }
 
-  if (root_->impl_->pendingIncomingInterestTable_)
-    // Quickly send the Data packet to satisfy interest, before calling callbacks.
-    root_->impl_->pendingIncomingInterestTable_->satisfyInterests(*data);
+  // This calls satisfyInterests.
+  setData(data);
 
-  data_ = data;
   // This sets OBJECT_READY.
   setObject(object);
 }
@@ -205,7 +203,6 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
     root_->impl_->pendingIncomingInterestTable_->satisfyInterests(*data);
 
   data_ = data;
-  setState(NamespaceState_DATA_RECEIVED);
 
   // TODO: This is presumably called by the application in the producer pipeline
   // (who may have already serialized and encrypted), but should we decrypt and
@@ -634,6 +631,7 @@ Namespace::Impl::onData
   Namespace& dataNamespace = getChild(data->getName());
   // setData will set the state to DATA_RECEIVED.
   dataNamespace.setData(data);
+  setState(NamespaceState_DATA_RECEIVED);
 
   // TODO: Start the validator.
   dataNamespace.impl_->setValidateState(NamespaceValidateState_VALIDATING);
