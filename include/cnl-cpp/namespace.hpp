@@ -104,7 +104,8 @@ public:
 
     /**
      * Set the Namespace that this handler is attached to. (This is
-     * automatically called when you call Namespace.setHandler.)
+     * automatically called when you call Namespace.setHandler.) This method
+     * does not attach this Handler to the Namespace.
      * @param nameSpace The Handler's Namespace.
      * @throws runtime_error if this Handler is already attached to a different
      * Namespace.
