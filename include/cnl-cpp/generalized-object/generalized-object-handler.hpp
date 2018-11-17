@@ -61,6 +61,22 @@ public:
   }
 
   /**
+   * Set the Namespace that this handler is attached to. (This is
+   * automatically called when you call Namespace.setHandler.) This method
+   * does not attach this Handler to the Namespace.
+   * @param nameSpace The Handler's Namespace.
+   * @return This GeneralizedObjectHandler so you can chain calls to update values.
+   * @throws runtime_error if this Handler is already attached to a different
+   * Namespace.
+   */
+  GeneralizedObjectHandler&
+  setNamespace(Namespace* nameSpace)
+  {
+    // Call the base implementation and cast the return value.
+    return static_cast<GeneralizedObjectHandler&>(Handler::setNamespace(nameSpace));
+  }
+
+  /**
    * Add an onSegment callback. When a new segment is available, this calls
    * onSegment as described below. Segments are supplied in order.
    * This is only used if the ContentMetaInfo hasSegments flag is true.

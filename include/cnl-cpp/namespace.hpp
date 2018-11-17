@@ -107,10 +107,11 @@ public:
      * automatically called when you call Namespace.setHandler.) This method
      * does not attach this Handler to the Namespace.
      * @param nameSpace The Handler's Namespace.
+     * @return This Handler so you can chain calls to update values.
      * @throws runtime_error if this Handler is already attached to a different
      * Namespace.
      */
-    void
+    Handler&
     setNamespace(Namespace* nameSpace);
 
     /**

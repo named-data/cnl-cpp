@@ -48,6 +48,23 @@ public:
   }
 
   /**
+   * Set the Namespace that this handler is attached to. (This is
+   * automatically called when you call Namespace.setHandler.) This method
+   * does not attach this Handler to the Namespace.
+   * @param nameSpace The Handler's Namespace.
+   * @return This SegmentedObjectHandler so you can chain calls to update values.
+   * @throws runtime_error if this Handler is already attached to a different
+   * Namespace.
+   */
+  SegmentedObjectHandler&
+  setNamespace(Namespace* nameSpace)
+  {
+    // Call the base implementation and cast the return value.
+    return static_cast<SegmentedObjectHandler&>
+      (SegmentStreamHandler::setNamespace(nameSpace));
+  }
+
+  /**
    * Add an OnSegmentedObject callback. When the child segments are assembled
    * into a single block of memory, this calls onSegmentedObject as described
    * below.

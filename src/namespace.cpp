@@ -33,7 +33,7 @@ INIT_LOGGER("cnl_cpp.Namespace");
 
 namespace cnl_cpp {
 
-void
+Namespace::Handler&
 Namespace::Handler::setNamespace(Namespace* nameSpace)
 {
   if (namespace_ && namespace_ != nameSpace)
@@ -41,6 +41,8 @@ Namespace::Handler::setNamespace(Namespace* nameSpace)
 
   namespace_ = nameSpace;
   onNamespaceSet();
+
+  return *this;
 }
 
 bool
