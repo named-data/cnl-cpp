@@ -75,7 +75,7 @@ Namespace::Impl::Impl
 }
 
 bool
-Namespace::Impl::hasChild(const ndn::Name& descendantName)
+Namespace::Impl::hasChild(const Name& descendantName)
 {
   if (!name_.isPrefixOf(descendantName))
     throw runtime_error
@@ -146,7 +146,7 @@ Namespace::Impl::getChildComponents()
 }
 
 void
-Namespace::Impl::serializeObject(const ndn::ptr_lib::shared_ptr<Object>& object)
+Namespace::Impl::serializeObject(const ptr_lib::shared_ptr<Object>& object)
 {
   // TODO: What if this node already has a _data and/or _object?
 
@@ -186,8 +186,8 @@ Namespace::Impl::serializeObject(const ndn::ptr_lib::shared_ptr<Object>& object)
   // This calls satisfyInterests.
   setData(data);
 
-  // This sets OBJECT_READY.
-  setObject(object);
+  object_ = object;
+  setState(NamespaceState_OBJECT_READY);
 }
 
 void
@@ -209,14 +209,6 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
   // TODO: This is presumably called by the application in the producer pipeline
   // (who may have already serialized and encrypted), but should we decrypt and
   // deserialize?
-}
-
-void
-Namespace::Impl::setObject(const ptr_lib::shared_ptr<Object>& object)
-{
-  // Debug: How do we know if we need to serialize/encrypt/sign?
-  object_ = object;
-  setState(NamespaceState_OBJECT_READY);
 }
 
 uint64_t
@@ -401,14 +393,16 @@ Namespace::Impl::getDecryptor()
 }
 
 void
-Namespace::Impl::deserialize(const Blob& blob)
+Namespace::Impl::deserialize_
+  (const Blob& blob, const Handler::OnDeserialized& onObjectSet)
 {
   Namespace* nameSpace = &outerNamespace_;
   while (nameSpace) {
     if (nameSpace->impl_->handler_) {
       if (nameSpace->impl_->handler_->canDeserialize
           (outerNamespace_, blob,
-           bind(&Namespace::Impl::onDeserialized, shared_from_this(), _1))) {
+           bind(&Namespace::Impl::defaultOnDeserialized, shared_from_this(), 
+                _1, onObjectSet))) {
         // Wait for the Handler to set the object.
         setState(NamespaceState_DESERIALIZING);
         return;
@@ -420,8 +414,8 @@ Namespace::Impl::deserialize(const Blob& blob)
 
   // Debug: Check if the object has been set (even if canDeserialize returned false.)
 
-  // Call the default onDeserialized immediately.
-  onDeserialized(ptr_lib::make_shared<BlobObject>(blob));
+  // Just call defaultOnDeserialized immediately.
+  defaultOnDeserialized(ptr_lib::make_shared<BlobObject>(blob), onObjectSet);
 }
 
 Namespace&
@@ -557,10 +551,15 @@ Namespace::Impl::fireOnObjectNeeded(Namespace& neededNamespace)
 }
 
 void
-Namespace::Impl::onDeserialized(const ptr_lib::shared_ptr<Object>& object)
+Namespace::Impl::defaultOnDeserialized
+  (const ptr_lib::shared_ptr<Object>& object,
+   const Handler::OnDeserialized& onObjectSet)
 {
   object_ = object;
   setState(NamespaceState_OBJECT_READY);
+
+  if (onObjectSet)
+    onObjectSet(object);
 }
 
 void
@@ -640,7 +639,7 @@ Namespace::Impl::onData
 
   DecryptorV2* decryptor = dataNamespace.impl_->getDecryptor();
   if (!decryptor) {
-    dataNamespace.impl_->deserialize(data->getContent());
+    dataNamespace.impl_->deserialize_(data->getContent());
     return;
   }
 
@@ -659,7 +658,8 @@ Namespace::Impl::onData
 
   decryptor->decrypt
     (encryptedContent,
-     bind(&Namespace::Impl::deserialize, shared_from_this(), _1),
+     bind(&Namespace::Impl::deserialize_, shared_from_this(), _1,
+          Handler::OnDeserialized()),
      bind(&Namespace::Impl::onDecryptionError, shared_from_this(), _1, _2));
 }
 

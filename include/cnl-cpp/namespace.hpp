@@ -318,7 +318,7 @@ public:
   /**
    * Attach the Data packet to this Namespace and satisfy pending Interests for
    * it. However, if a Data packet is already attached, do nothing. This does
-   * not update the Namespace state.
+   * not update the Namespace state, decrypt, verify or deserialize.
    * @param data The Data packet object whose name must equal the name in this
    * Namespace node. To get the right Namespace, you can use
    * getChild(data.getName()). For efficiency, this does not copy the Data
@@ -345,12 +345,6 @@ public:
    */
   const ndn::ptr_lib::shared_ptr<ndn::Data>&
   getData() { return impl_->getData(); }
-
-  void
-  setObject(const ndn::ptr_lib::shared_ptr<Object>& object)
-  {
-    impl_->setObject(object);
-  }
 
   /**
    * Get the deserialized object attached to this Namespace object. Note that
@@ -585,6 +579,25 @@ public:
   static uint64_t
   getNextCallbackId();
 
+  /**
+   * If canDeserialize on the Handler of this or a parent Namespace node
+   * returns true, set the state to DESERIALIZING and wait for the Handler to
+   * call the given onDeserialized. Otherwise, just call defaultOnDeserialized
+   * immediately, which sets the object and sets the state to OBJECT_READY. This 
+   * method name has an underscore because is normally only called from a
+   * Handler, not from the application.
+   * @param blob The Blob to deserialize.
+   * @param onObjectSet (optional) If supplied, after setting the object, this
+   * calls onObjectSet(object).
+   */
+  void
+  deserialize_
+    (const ndn::Blob& blob,
+     const Handler::OnDeserialized& onObjectSet = Handler::OnDeserialized())
+  {
+    impl_->deserialize_(blob, onObjectSet);
+  }
+
   Namespace&
   operator [] (const ndn::Name::Component& component)
   {
@@ -673,9 +686,6 @@ public:
     const ndn::ptr_lib::shared_ptr<ndn::Data>&
     getData() { return data_; }
 
-    void
-    setObject(const ndn::ptr_lib::shared_ptr<Object>& object);
-
     const ndn::ptr_lib::shared_ptr<Object>&
     getObject() { return object_; }
 
@@ -732,6 +742,11 @@ public:
     void
     removeCallback(uint64_t callbackId);
 
+    void
+    deserialize_
+      (const ndn::Blob& blob, 
+       const Handler::OnDeserialized& onObjectSet = Handler::OnDeserialized());
+
   private:
     /**
      * Get the Face set by setFace on this or a parent Namespace node.
@@ -761,16 +776,6 @@ public:
      */
     ndn::DecryptorV2*
     getDecryptor();
-
-    /**
-     * If canDeserialize on the Handler of this or a parent Namespace node
-     * returns true, set the state to DESERIALIZING and wait for the Handler to
-     * set the object. Otherwise, just all the default onDeserialized
-     * immediately, which sets the state to OBJECT_READY.
-     * @param blob The Blob to deserialize.
-     */
-    void
-    deserialize(const ndn::Blob& blob);
 
     /**
      * Create the child with the given name component and add it to this
@@ -819,9 +824,13 @@ public:
      * the OnStateChanged callbacks. This may be called from canDeserialize in a
      * handler.
      * @param object The deserialized object.
+     * @param onObjectSet If supplied, after setting the object, this calls
+     * onObjectSet(object).
      */
     void
-    onDeserialized(const ndn::ptr_lib::shared_ptr<Object>& object);
+    defaultOnDeserialized
+      (const ndn::ptr_lib::shared_ptr<Object>& object,
+       const Handler::OnDeserialized& onObjectSet);
 
     /**
      * This is the default OnInterest callback which searches this node and
