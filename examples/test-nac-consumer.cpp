@@ -141,7 +141,7 @@ static uint8_t MEMBER_PRIVATE_KEY[] = {
 };
 
 static void
-onSegmentedObject(Blob contentBlob, bool* enabled);
+onSegmentedObject(const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled);
 
 int main(int argc, char** argv)
 {
@@ -187,12 +187,13 @@ int main(int argc, char** argv)
 /**
  * This is called to print the content after it is decrypted and re-assembled
  * from segments.
- * @param contentBlob The Blob assembled from the contents.
+ * @param object The object that was assembled from the segment contents.
  * @param enabled On success or error, set *enabled = false.
  */
 static void
-onSegmentedObject(Blob contentBlob, bool* enabled)
+onSegmentedObject(const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled)
 {
-  cout << "Got segmented content " << contentBlob.toRawStr() << endl;
+  cout << "Got segmented content " << 
+    ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
   *enabled = false;
 }
