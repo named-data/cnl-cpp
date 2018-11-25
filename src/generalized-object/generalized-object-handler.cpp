@@ -93,27 +93,24 @@ GeneralizedObjectHandler::Impl::canDeserialize
 
     // TODO: Fetch the _manifest packet. How to override per-packet verification?
   }
-  else {
+  else
     // No segments, so the object is the ContentMetaInfo "other" Blob.
-    if (!contentMetaInfo->getOther().isNull()) {
-      namespace_->setObject(ptr_lib::make_shared<BlobObject>
-        (contentMetaInfo->getOther()));
-
-      if (onGeneralizedObject_)
-        onGeneralizedObject_(contentMetaInfo, contentMetaInfo->getOther());
-    }
-  }
+    // Deserialize and call the same callback as the segmentedObjectHandler.
+    namespace_->deserialize_
+      (contentMetaInfo->getOther(),
+       bind(&GeneralizedObjectHandler::Impl::onSegmentedObject,
+       shared_from_this(), _1, contentMetaInfo));
 
   return true;
 }
 
 void
 GeneralizedObjectHandler::Impl::onSegmentedObject
-  (Blob contentBlob,
+  (const ndn::ptr_lib::shared_ptr<Object>& object,
    const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo)
 {
   if (onGeneralizedObject_)
-    onGeneralizedObject_(contentMetaInfo, contentBlob);
+    onGeneralizedObject_(contentMetaInfo, object);
 }
 
 GeneralizedObjectHandler::Values* GeneralizedObjectHandler::values_ = 0;
