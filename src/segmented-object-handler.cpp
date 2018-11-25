@@ -31,7 +31,7 @@ INIT_LOGGER("cnl_cpp.SegmentedObjectHandler");
 
 namespace cnl_cpp {
 
-SegmentedObjectHandler::Impl::Impl(const OnSegmentedObject& onSegmentedObject)
+SegmentedObjectHandler::Impl::Impl(const OnDeserialized& onSegmentedObject)
 : finished_(false), totalSize_(0), namespace_(0)
 {
   if (onSegmentedObject)
@@ -47,7 +47,7 @@ SegmentedObjectHandler::Impl::initialize(SegmentedObjectHandler* outerHandler)
 
 uint64_t
 SegmentedObjectHandler::Impl::addOnSegmentedObject
-  (const OnSegmentedObject& onSegmentedObject)
+  (const OnDeserialized& onSegmentedObject)
 {
   uint64_t callbackId = Namespace::getNextCallbackId();
   onSegmentedObjectCallbacks_[callbackId] = onSegmentedObject;
@@ -88,31 +88,32 @@ SegmentedObjectHandler::Impl::onSegment(Namespace* segmentNamespace)
       segments_.clear();
       finished_ = true;
 
-      Blob contentBlob = Blob(content, false);
-      namespace_->setObject(ptr_lib::make_shared<BlobObject>(contentBlob));
-
-      fireOnSegmentedObject(contentBlob);
+      // Deserialize and fire the onSegmentedObject callbacks when done.
+      namespace_->deserialize_
+        (Blob(content, false),
+         bind(&SegmentedObjectHandler::Impl::fireOnSegmentedObject, shared_from_this(), _1));
   }
 }
 
 void
-SegmentedObjectHandler::Impl::fireOnSegmentedObject(Blob contentBlob)
+SegmentedObjectHandler::Impl::fireOnSegmentedObject
+  (const ptr_lib::shared_ptr<Object>& object)
 {
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
   keys.reserve(onSegmentedObjectCallbacks_.size());
-  for (map<uint64_t, OnSegmentedObject>::iterator i =
+  for (map<uint64_t, OnDeserialized>::iterator i =
          onSegmentedObjectCallbacks_.begin();
        i != onSegmentedObjectCallbacks_.end(); ++i)
     keys.push_back(i->first);
 
   for (size_t i = 0; i < keys.size(); ++i) {
     // A callback on a previous pass may have removed this callback, so check.
-    map<uint64_t, OnSegmentedObject>::iterator entry =
+    map<uint64_t, OnDeserialized>::iterator entry =
       onSegmentedObjectCallbacks_.find(keys[i]);
     if (entry != onSegmentedObjectCallbacks_.end()) {
       try {
-        entry->second(contentBlob);
+        entry->second(object);
       } catch (const std::exception& ex) {
         _LOG_ERROR("SegmentStreamHandler::fireOnSegment: Error in onSegmentedObject: " <<
                    ex.what());
