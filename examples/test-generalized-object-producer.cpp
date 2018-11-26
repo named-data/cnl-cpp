@@ -27,8 +27,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <ndn-cpp/security/key-chain.hpp>
-#include <ndn-cpp-tools/usersync/content-meta-info.hpp>
-#include <cnl-cpp/namespace.hpp>
+#include <cnl-cpp/generalized-object/generalized-object-handler.hpp>
 
 using namespace std;
 using namespace ndn;
@@ -166,24 +165,8 @@ int main(int argc, char** argv)
     objectPrefix.setFace(&face, &onRegisterFailed);
 
     cout << "Preparing data for" << objectPrefix.getName() << endl;
-
-    // Prepare the _meta packet.
-    ContentMetaInfo contentMetaInfo;
-    contentMetaInfo.setContentType("text/html");
-    contentMetaInfo.setTimestamp(ndn_getNowMilliseconds());
-    contentMetaInfo.setHasSegments(true);
-    contentMetaInfo.setOther(Blob::fromRawStr("Debug other"));
-    objectPrefix[Blob::fromRawStr("_meta")].serializeObject
-      (ptr_lib::make_shared<BlobObject>(contentMetaInfo.wireEncode()));
-
-    // We know the content has two segments.
-    MetaInfo metaInfo;
-    metaInfo.setFinalBlockId(Name().appendSegment(1)[0]);
-    objectPrefix.setNewDataMetaInfo(metaInfo);
-    objectPrefix[Name::Component::fromSegment(0)].serializeObject
-      (ptr_lib::make_shared<BlobObject>(Blob::fromRawStr("EB run #28. ")));
-    objectPrefix[Name::Component::fromSegment(1)].serializeObject
-      (ptr_lib::make_shared<BlobObject>(Blob::fromRawStr("Ham and oats")));
+    GeneralizedObjectHandler().setObject
+      (objectPrefix, Blob::fromRawStr("EB run #28. Ham and oats"), "text/html");
 
     while (true) {
       face.processEvents();
