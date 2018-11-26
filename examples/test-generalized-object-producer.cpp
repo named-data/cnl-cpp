@@ -159,34 +159,31 @@ int main(int argc, char** argv)
        Blob(DEFAULT_RSA_PUBLIC_KEY_DER, sizeof(DEFAULT_RSA_PUBLIC_KEY_DER))));
     face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
 
-    Namespace streamNamespace("/ndn/stream_prefix", &keyChain);
+    Namespace objectPrefix("/ndn/eb/run/28/description", &keyChain);
 
-    cout << "Register prefix " << streamNamespace.getName().toUri() << endl;
+    cout << "Register prefix " << objectPrefix.getName().toUri() << endl;
     // Set the face and register to receive Interests.
-    streamNamespace.setFace(&face, &onRegisterFailed);
+    objectPrefix.setFace(&face, &onRegisterFailed);
 
-    Name::Component sequenceNumber("1");
-    Namespace& sequenceNamespace = streamNamespace[sequenceNumber];
-    cout << "Preparing data for" << streamNamespace.getName().toUri() << endl;
+    cout << "Preparing data for" << objectPrefix.getName() << endl;
 
     // Prepare the _meta packet.
     ContentMetaInfo contentMetaInfo;
-    contentMetaInfo.setContentType("ndnrtc4");
+    contentMetaInfo.setContentType("text/html");
     contentMetaInfo.setTimestamp(ndn_getNowMilliseconds());
     contentMetaInfo.setHasSegments(true);
     contentMetaInfo.setOther(Blob::fromRawStr("Debug other"));
-    sequenceNamespace[Blob::fromRawStr("_meta")].serializeObject
+    objectPrefix[Blob::fromRawStr("_meta")].serializeObject
       (ptr_lib::make_shared<BlobObject>(contentMetaInfo.wireEncode()));
 
     // We know the content has two segments.
     MetaInfo metaInfo;
     metaInfo.setFinalBlockId(Name().appendSegment(1)[0]);
-    sequenceNamespace.setNewDataMetaInfo(metaInfo);
-    sequenceNamespace[Name::Component::fromSegment(0)].serializeObject
-      (ptr_lib::make_shared<BlobObject>(Blob::fromRawStr("Test")));
-    sequenceNamespace[Name::Component::fromSegment(1)].serializeObject
-      (ptr_lib::make_shared<BlobObject>
-       (Blob::fromRawStr(" message " + sequenceNumber.getValue().toRawStr())));
+    objectPrefix.setNewDataMetaInfo(metaInfo);
+    objectPrefix[Name::Component::fromSegment(0)].serializeObject
+      (ptr_lib::make_shared<BlobObject>(Blob::fromRawStr("EB run #28. ")));
+    objectPrefix[Name::Component::fromSegment(1)].serializeObject
+      (ptr_lib::make_shared<BlobObject>(Blob::fromRawStr("Ham and oats")));
 
     while (true) {
       face.processEvents();

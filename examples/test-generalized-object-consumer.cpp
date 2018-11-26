@@ -44,15 +44,13 @@ int main(int argc, char** argv)
     // The default Face will connect using a Unix socket, or to "localhost".
     Face face;
 
-    Name prefix("/ndn/stream_prefix/1");
-    Namespace prefixNamespace(prefix);
-    prefixNamespace.setFace(&face);
+    Namespace objectPrefix("/ndn/eb/run/28/description");
+    objectPrefix.setFace(&face);
 
     bool enabled = true;
-    prefixNamespace.setHandler
+    objectPrefix.setHandler
       (ptr_lib::make_shared<GeneralizedObjectHandler>
-       (bind(&onGeneralizedObject, _1, _2, &enabled)));
-    prefixNamespace.objectNeeded();
+       (bind(&onGeneralizedObject, _1, _2, &enabled))).objectNeeded();
 
     while (enabled) {
       face.processEvents();
