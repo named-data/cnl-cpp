@@ -905,6 +905,10 @@ public:
   };
 
 private:
+  // Disable the copy constructor and assignment operator.
+  Namespace(const Namespace& other);
+  Namespace& operator=(const Namespace& other);
+
   ndn::ptr_lib::shared_ptr<Impl> impl_;
 #ifdef NDN_CPP_HAVE_BOOST_ASIO
   // Multi-threading is enabled, so different threads my access this shared
