@@ -153,6 +153,13 @@ public:
     impl_->setInitialInterestCount(initialInterestCount);
   }
 
+  void
+  setObject
+    (Namespace& nameSpace, const ndn::Blob& obj, const std::string& contentType)
+  {
+    impl_->setObject(nameSpace, obj, contentType);
+  }
+
   static const ndn::Name::Component&
   getNAME_COMPONENT_META() { return getValues().NAME_COMPONENT_META; }
 
@@ -235,7 +242,8 @@ private:
     }
 
     void
-    setNamespace(Namespace* nameSpace) { namespace_ = nameSpace; }
+    setObject
+      (Namespace& nameSpace, const ndn::Blob& obj, const std::string& contentType);
 
     bool
     canDeserialize

@@ -20,6 +20,8 @@
  */
 
 #include <memory.h>
+#include <stdexcept>
+#include <ndn-cpp-tools/usersync/content-meta-info.hpp>
 #include <cnl-cpp/generalized-object/generalized-object-handler.hpp>
 
 using namespace std;
@@ -36,6 +38,21 @@ GeneralizedObjectHandler::Impl::Impl(const OnGeneralizedObject& onGeneralizedObj
   // We'll call onGeneralizedObject if we don't use the SegmentedObjectHandler.
   onGeneralizedObject_(onGeneralizedObject), namespace_(0)
 {
+}
+
+void
+GeneralizedObjectHandler::Impl::setObject
+  (Namespace& nameSpace, const Blob& obj, const string& contentType)
+{
+  // Prepare the _meta packet.
+  ContentMetaInfo contentMetaInfo;
+  contentMetaInfo.setContentType(contentType);
+  contentMetaInfo.setTimestamp(ndn_getNowMilliseconds());
+  contentMetaInfo.setHasSegments(false);
+  // TODO: Serialize and segment.
+  contentMetaInfo.setOther(obj);
+  nameSpace[getNAME_COMPONENT_META()].serializeObject
+    (ptr_lib::make_shared<BlobObject>(contentMetaInfo.wireEncode()));
 }
 
 void
