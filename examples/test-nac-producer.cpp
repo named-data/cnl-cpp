@@ -209,8 +209,8 @@ public:
    * encrypted segments.
    */
   TestProducer
-    (const Name& contentPrefix, EncryptorV2* encryptor, KeyChain* keyChain)
-  : contentPrefix_(contentPrefix), encryptor_(encryptor), keyChain_(keyChain)
+    (const Name& contentPrefix, EncryptorV2* encryptor)
+  : contentPrefix_(contentPrefix), encryptor_(encryptor)
   {
   }
 
@@ -244,16 +244,9 @@ public:
     return true;
   }
 
-  void
-  onRegisterFailed(const ptr_lib::shared_ptr<const Name>& prefix)
-  {
-    cout << "Register failed for prefix " << prefix->toUri() << endl;
-  }
-
 private:
   Name contentPrefix_;
   EncryptorV2* encryptor_;
-  KeyChain* keyChain_;
 };
 
 int main(int argc, char** argv)
@@ -287,14 +280,16 @@ int main(int argc, char** argv)
       (ckPrefix, &keyChain, &face, &validator);
 
     // Make the callback to produce a Data packet for a content segment.
-    TestProducer testProducer(contentPrefix, encryptor.get(), &keyChain);
+    TestProducer testProducer(contentPrefix, encryptor.get());
     contentNamespace.addOnObjectNeeded
       (bind(&TestProducer::onObjectNeeded, &testProducer, _1, _2, _3));
 
     cout << "Register prefix " << contentNamespace.getName().toUri() << endl;
     // Set the face and register to receive Interests.
     contentNamespace.setFace
-      (&face, bind(&TestProducer::onRegisterFailed, &testProducer, _1));
+      (&face, [](const ptr_lib::shared_ptr<const Name>& prefix) {
+        cout << "Register failed for prefix " << prefix->toUri() << endl;
+      });
 
     while (true) {
       face.processEvents();

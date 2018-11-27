@@ -30,10 +30,6 @@
 using namespace std;
 using namespace cnl_cpp;
 using namespace ndn;
-using namespace ndn::func_lib;
-
-static void
-onSegmentedObject(const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled);
 
 int main(int argc, char** argv)
 {
@@ -44,10 +40,15 @@ int main(int argc, char** argv)
     page.setFace(&face);
 
     bool enabled = true;
-    ptr_lib::shared_ptr<SegmentedObjectHandler> handler =
-      ptr_lib::make_shared<SegmentedObjectHandler>
-        (bind(&onSegmentedObject, _1, &enabled));
-    page.setHandler(handler).objectNeeded();
+    // This is called to print the content after it is re-assembled from segments.
+    auto onObject = [&]
+      (const ndn::ptr_lib::shared_ptr<Object>& object) {
+      cout << "Got segmented content size " <<
+        ptr_lib::dynamic_pointer_cast<BlobObject>(object)->size() << endl;
+      enabled = false;
+    };
+    page.setHandler
+      (ptr_lib::make_shared<SegmentedObjectHandler>(onObject)).objectNeeded();
 
     while (enabled) {
       face.processEvents();
@@ -58,17 +59,4 @@ int main(int argc, char** argv)
     cout << "exception: " << e.what() << endl;
   }
   return 0;
-}
-
-/**
- * This is called to print the content after it is re-assembled from segments.
- * @param object The object that was assembled from the segment contents.
- * @param enabled On success or error, set *enabled = false.
- */
-static void
-onSegmentedObject(const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled)
-{
-  cout << "Got segmented content size " <<
-    ptr_lib::dynamic_pointer_cast<BlobObject>(object)->size() << endl;
-  *enabled = false;
 }

@@ -32,7 +32,6 @@
 using namespace std;
 using namespace ndn;
 using namespace ndntools;
-using namespace ndn::func_lib;
 using namespace cnl_cpp;
 
 static uint8_t DEFAULT_RSA_PUBLIC_KEY_DER[] = {
@@ -138,12 +137,6 @@ static uint8_t DEFAULT_RSA_PRIVATE_KEY_DER[] = {
   0xcb, 0xea, 0x8f
 };
 
-void
-onRegisterFailed(const ptr_lib::shared_ptr<const Name>& prefix)
-{
-  cout << "Register failed for prefix " << prefix->toUri() << endl;
-}
-
 int main(int argc, char** argv)
 {
   try {
@@ -162,7 +155,10 @@ int main(int argc, char** argv)
 
     cout << "Register prefix " << objectPrefix.getName().toUri() << endl;
     // Set the face and register to receive Interests.
-    objectPrefix.setFace(&face, &onRegisterFailed);
+    objectPrefix.setFace
+      (&face, [](const ptr_lib::shared_ptr<const Name>& prefix) {
+        cout << "Register failed for prefix " << prefix->toUri() << endl;
+      });
 
     cout << "Preparing data for" << objectPrefix.getName() << endl;
     GeneralizedObjectHandler().setObject

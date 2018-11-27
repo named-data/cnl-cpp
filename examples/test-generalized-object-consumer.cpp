@@ -31,12 +31,6 @@
 using namespace std;
 using namespace cnl_cpp;
 using namespace ndn;
-using namespace ndn::func_lib;
-
-static void
-onGeneralizedObject
-  (const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-   const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled);
 
 int main(int argc, char** argv)
 {
@@ -48,9 +42,17 @@ int main(int argc, char** argv)
     objectPrefix.setFace(&face);
 
     bool enabled = true;
+    // This is called to print the content after it is re-assembled from segments.
+    auto onObject = [&]
+      (const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
+       const ndn::ptr_lib::shared_ptr<Object>& object) {
+      cout << "Got generalized object, content-type " <<
+        contentMetaInfo->getContentType() << ": " <<
+        ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
+      enabled = false;
+    };
     objectPrefix.setHandler
-      (ptr_lib::make_shared<GeneralizedObjectHandler>
-       (bind(&onGeneralizedObject, _1, _2, &enabled))).objectNeeded();
+      (ptr_lib::make_shared<GeneralizedObjectHandler>(onObject)).objectNeeded();
 
     while (enabled) {
       face.processEvents();
@@ -61,21 +63,4 @@ int main(int argc, char** argv)
     cout << "exception: " << e.what() << endl;
   }
   return 0;
-}
-
-/**
- * This is called to print the content after it is re-assembled from segments.
- * @param contentMetaInfo The fetched ContentMetaInfo.
- * @param object The object that was assembled from the segment contents.
- * @param enabled On success or error, set *enabled = false.
- */
-static void
-onGeneralizedObject
-  (const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-   const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled)
-{
-  cout << "Got generalized object, content-type " <<
-    contentMetaInfo->getContentType() << ": " <<
-    ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
-  *enabled = false;
 }

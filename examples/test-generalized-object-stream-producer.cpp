@@ -33,7 +33,6 @@
 using namespace std;
 using namespace ndn;
 using namespace ndntools;
-using namespace ndn::func_lib;
 using namespace cnl_cpp;
 
 static uint8_t DEFAULT_RSA_PUBLIC_KEY_DER[] = {
@@ -139,12 +138,6 @@ static uint8_t DEFAULT_RSA_PRIVATE_KEY_DER[] = {
   0xcb, 0xea, 0x8f
 };
 
-void
-onRegisterFailed(const ptr_lib::shared_ptr<const Name>& prefix)
-{
-  cout << "Register failed for prefix " << prefix->toUri() << endl;
-}
-
 class TestProducer {
 public:
   TestProducer(Namespace& stream)
@@ -190,7 +183,10 @@ int main(int argc, char** argv)
 
     cout << "Register prefix " << stream.getName().toUri() << endl;
     // Set the face and register to receive Interests.
-    stream.setFace(&face, &onRegisterFailed);
+    stream.setFace
+      (&face, [](const ptr_lib::shared_ptr<const Name>& prefix) {
+        cout << "Register failed for prefix " << prefix->toUri() << endl;
+      });
 
     TestProducer producer(stream);
 

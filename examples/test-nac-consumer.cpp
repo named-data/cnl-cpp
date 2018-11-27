@@ -33,7 +33,6 @@
 
 using namespace std;
 using namespace ndn;
-using namespace ndn::func_lib;
 using namespace cnl_cpp;
 
 // This is the same as MEMBER_PUBLIC_KEY in test-nac-producer.
@@ -140,9 +139,6 @@ static uint8_t MEMBER_PRIVATE_KEY[] = {
   0x1d
 };
 
-static void
-onSegmentedObject(const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled);
-
 int main(int argc, char** argv)
 {
   try {
@@ -168,10 +164,15 @@ int main(int argc, char** argv)
     contentNamespace.setDecryptor(&decryptor);
 
     bool enabled = true;
-    ptr_lib::shared_ptr<SegmentedObjectHandler> segmentedHandler =
-      ptr_lib::make_shared<SegmentedObjectHandler>
-        (bind(&onSegmentedObject, _1, &enabled));
-    contentNamespace.setHandler(segmentedHandler).objectNeeded();
+    // This is called to print the content after it is decrypted and re-assembled
+    // from segments.
+    auto onObject = [&](const ndn::ptr_lib::shared_ptr<Object>& object) {
+      cout << "Got segmented content " <<
+        ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
+      enabled = false;
+    };
+    contentNamespace.setHandler
+      (ptr_lib::make_shared<SegmentedObjectHandler>(onObject)).objectNeeded();
 
     while (enabled) {
       face.processEvents();
@@ -182,18 +183,4 @@ int main(int argc, char** argv)
     cout << "exception: " << e.what() << endl;
   }
   return 0;
-}
-
-/**
- * This is called to print the content after it is decrypted and re-assembled
- * from segments.
- * @param object The object that was assembled from the segment contents.
- * @param enabled On success or error, set *enabled = false.
- */
-static void
-onSegmentedObject(const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled)
-{
-  cout << "Got segmented content " << 
-    ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
-  *enabled = false;
 }

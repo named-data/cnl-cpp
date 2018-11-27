@@ -31,13 +31,6 @@
 using namespace std;
 using namespace cnl_cpp;
 using namespace ndn;
-using namespace ndn::func_lib;
-
-static void
-onSequencedGeneralizedObject
-  (int sequenceNumber,
-   const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-   const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled);
 
 int main(int argc, char** argv)
 {
@@ -49,9 +42,19 @@ int main(int argc, char** argv)
     stream.setFace(&face);
 
     bool enabled = true;
+    // This is called to print the content of each streamed object when it arrives.
+    auto onNewObject = [&]
+      (int sequenceNumber,
+       const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
+       const ndn::ptr_lib::shared_ptr<Object>& object) {
+      cout << "Got generalized object, sequenceNumber " << sequenceNumber <<
+        ", content-type " << contentMetaInfo->getContentType() << ": " <<
+        ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
+      enabled = false;
+    };
     stream.setHandler
       (ptr_lib::make_shared<GeneralizedObjectStreamHandler>
-       (bind(&onSequencedGeneralizedObject, _1, _2, _3, &enabled))).objectNeeded();
+       (onNewObject)).objectNeeded();
 
     while (enabled) {
       face.processEvents();
@@ -62,16 +65,4 @@ int main(int argc, char** argv)
     cout << "exception: " << e.what() << endl;
   }
   return 0;
-}
-
-static void
-onSequencedGeneralizedObject
-  (int sequenceNumber,
-   const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-   const ndn::ptr_lib::shared_ptr<Object>& object, bool* enabled)
-{
-  cout << "Got generalized object, sequenceNumber " << sequenceNumber <<
-    ", content-type " << contentMetaInfo->getContentType() << ": " <<
-    ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
-  *enabled = false;
 }
