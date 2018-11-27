@@ -179,8 +179,7 @@ private:
      */
     bool
     onObjectNeeded
-      (Namespace& nameSpace, Namespace& neededNamespace,
-       uint64_t callbackId);
+      (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId);
 
     void
     onStateChanged

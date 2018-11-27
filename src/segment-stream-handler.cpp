@@ -90,8 +90,7 @@ SegmentStreamHandler::Impl::onNamespaceSet(Namespace* nameSpace)
 
 bool
 SegmentStreamHandler::Impl::onObjectNeeded
-  (Namespace& nameSpace, Namespace& neededNamespace,
-   uint64_t callbackId)
+  (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId)
 {
   if (&nameSpace != &neededNamespace)
     return false;
