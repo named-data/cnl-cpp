@@ -280,6 +280,8 @@ Namespace::Impl::setHandler(const ptr_lib::shared_ptr<Handler>& handler)
 void
 Namespace::Impl::objectNeeded()
 {
+  // Debug: Allow mustBeFresh == false?
+  // Debug: Check if already have a child object?
   if (object_)
     // We already have the object.
     // Debug: (But maybe we don't have the _data and we need it?)
@@ -632,6 +634,7 @@ Namespace::Impl::findBestMatchName
       nameSpace.impl_->freshnessExpiryTimeMilliseconds_ >= 0 &&
       nowMilliseconds >= nameSpace.impl_->freshnessExpiryTimeMilliseconds_)
     // The Data packet is no longer fresh.
+    // Debug: When to set the state to OBJECT_READY_BUT_STALE?
     return 0;
 
   if (nameSpace.impl_->data_ && interest.matchesData(*nameSpace.impl_->data_))
