@@ -851,10 +851,14 @@ public:
      * the given Namespace.
      * @param nameSpace This searches this Namespace and its children.
      * @param interest This calls interest.matchesData().
+     * @param nowMilliseconds The current time in milliseconds from
+     * ndn_getNowMilliseconds for checking Data packet freshness.
      * @return The Namespace object for the matched name or null if not found.
      */
     static Namespace*
-    findBestMatchName(Namespace& nameSpace, const ndn::Interest& interest);
+    findBestMatchName
+      (Namespace& nameSpace, const ndn::Interest& interest,
+       ndn::MillisecondsSince1970 nowMilliseconds);
 
     void
     onData(const ndn::ptr_lib::shared_ptr<const ndn::Interest>& interest,
@@ -883,6 +887,7 @@ public:
     ndn::ptr_lib::shared_ptr<ndn::NetworkNack> networkNack_;
     NamespaceValidateState validateState_;
     ndn::ptr_lib::shared_ptr<ndn::ValidationError> validationError_;
+    ndn::MillisecondsSince1970 freshnessExpiryTimeMilliseconds_;
     ndn::ptr_lib::shared_ptr<ndn::Data> data_;
     ndn::ptr_lib::shared_ptr<Object> object_;
     ndn::Face* face_;

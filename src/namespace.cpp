@@ -69,8 +69,9 @@ Namespace::Impl::Impl
   (Namespace& outerNamespace, const Name& name, KeyChain* keyChain)
 : outerNamespace_(outerNamespace), name_(name), keyChain_(keyChain), parent_(0),
   root_(&outerNamespace), state_(NamespaceState_NAME_EXISTS),
-  validateState_(NamespaceValidateState_WAITING_FOR_DATA), face_(0),
-  decryptor_(0), maxInterestLifetime_(-1)
+  validateState_(NamespaceValidateState_WAITING_FOR_DATA), 
+  freshnessExpiryTimeMilliseconds_(-1.0), face_(0), decryptor_(0),
+  maxInterestLifetime_(-1)
 {
 }
 
@@ -204,6 +205,12 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
     // Quickly send the Data packet to satisfy interest, before calling callbacks.
     root_->impl_->pendingIncomingInterestTable_->satisfyInterests(*data);
 
+  if (data->getMetaInfo().getFreshnessPeriod() >= 0.0)
+    freshnessExpiryTimeMilliseconds_ =
+      ndn_getNowMilliseconds() + data->getMetaInfo().getFreshnessPeriod();
+  else
+    // Does not expire.
+    freshnessExpiryTimeMilliseconds_ = -1.0;
   data_ = data;
 
   // TODO: This is presumably called by the application in the producer pipeline
@@ -580,7 +587,8 @@ Namespace::Impl::onInterest
 
   // Check if the Namespace node exists and has a matching Data packet.
   if (hasChild(interestName)) {
-    Namespace* bestMatch = findBestMatchName(getChild(interestName), *interest);
+    Namespace* bestMatch = findBestMatchName
+      (getChild(interestName), *interest, ndn_getNowMilliseconds());
     if (bestMatch) {
       // findBestMatchName makes sure there is a data_ packet.
       face.putData(*bestMatch->impl_->data_);
@@ -596,7 +604,8 @@ Namespace::Impl::onInterest
 
 Namespace*
 Namespace::Impl::findBestMatchName
-  (Namespace& nameSpace, const Interest& interest)
+  (Namespace& nameSpace, const Interest& interest,
+   MillisecondsSince1970 nowMilliseconds)
 {
   Namespace *bestMatch = 0;
 
@@ -606,7 +615,8 @@ Namespace::Impl::findBestMatchName
         i = nameSpace.impl_->children_.rbegin();
        i != nameSpace.impl_->children_.rend(); ++i) {
     Namespace& child = *i->second;
-    Namespace* childBestMatch = findBestMatchName(child, interest);
+    Namespace* childBestMatch = findBestMatchName
+      (child, interest, nowMilliseconds);
 
     if (childBestMatch &&
         (!bestMatch ||
@@ -617,6 +627,12 @@ Namespace::Impl::findBestMatchName
   if (bestMatch)
     // We have a child match, and it is longer than this name, so return it.
     return bestMatch;
+
+  if (interest.getMustBeFresh() &&
+      nameSpace.impl_->freshnessExpiryTimeMilliseconds_ >= 0 &&
+      nowMilliseconds >= nameSpace.impl_->freshnessExpiryTimeMilliseconds_)
+    // The Data packet is no longer fresh.
+    return 0;
 
   if (nameSpace.impl_->data_ && interest.matchesData(*nameSpace.impl_->data_))
     return &nameSpace;
