@@ -69,8 +69,7 @@ GeneralizedObjectHandler::Impl::onNamespaceSet(Namespace* nameSpace)
 
 bool
 GeneralizedObjectHandler::Impl::onObjectNeeded
-  (Namespace& nameSpace, Namespace& neededNamespace,
-   uint64_t callbackId)
+  (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId)
 {
   if (&neededNamespace != namespace_)
     // Don't respond for child namespaces (including when we call objectNeeded

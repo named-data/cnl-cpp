@@ -253,8 +253,7 @@ private:
   private:
     bool
     onObjectNeeded
-      (Namespace& nameSpace, Namespace& neededNamespace,
-       uint64_t callbackId);
+      (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId);
 
     /**
      * This is called when the SegmentedObjectHandler finishes.
