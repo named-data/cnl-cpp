@@ -22,7 +22,6 @@
 #include <memory.h>
 #include <ndn-cpp/util/logging.hpp>
 #include <ndn-cpp/digest-sha256-signature.hpp>
-#include <ndn-cpp/lite/util/crypto-lite.hpp>
 #include <cnl-cpp/segmented-object-handler.hpp>
 
 using namespace std;
@@ -121,10 +120,12 @@ SegmentedObjectHandler::Impl::setObject
     if (useSignatureManifest) {
       data->setSignature(digestSignature);
 
-      // Append the digest of the data content to the manifestContent.
+      // Append the implicit to the manifestContent.
+      const Blob& implicitDigest = (*data->getFullName())[-1].getValue();
       size_t digestOffset = segment * ndn_SHA256_DIGEST_SIZE;
-      CryptoLite::digestSha256
-        (data->getContent(), &manifestContent->front() + digestOffset);
+      memcpy
+        (&manifestContent->front() + digestOffset, implicitDigest.buf(),
+         ndn_SHA256_DIGEST_SIZE);
     }
     else
       keyChain->sign(*data);
