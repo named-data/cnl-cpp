@@ -89,6 +89,23 @@ public:
   int
   getProducedSequenceNumber() { return impl_->getProducedSequenceNumber(); }
 
+  /**
+   * Get the freshness period to use for the produced _latest data packet.
+   * @return The freshness period in milliseconds.
+   */
+  ndn::Milliseconds
+  getLatestPacketFreshnessPeriod() { return impl_->getLatestPacketFreshnessPeriod(); }
+
+  /**
+   * Set the freshness period to use for the produced _latest data packet.
+   * @param latestPacketFreshnessPeriod The freshness period in milliseconds.
+   */
+  void
+  setLatestPacketFreshnessPeriod(ndn::Milliseconds latestPacketFreshnessPeriod)
+  {
+    impl_->setLatestPacketFreshnessPeriod(latestPacketFreshnessPeriod);
+  }
+
   static const ndn::Name::Component&
   getNAME_COMPONENT_LATEST() { return getValues().NAME_COMPONENT_LATEST; }
 
@@ -117,6 +134,15 @@ private:
 
     int
     getProducedSequenceNumber() { return producedSequenceNumber_; }
+
+    ndn::Milliseconds
+    getLatestPacketFreshnessPeriod() { return latestPacketFreshnessPeriod_; }
+
+    void
+    setLatestPacketFreshnessPeriod(ndn::Milliseconds latestPacketFreshnessPeriod)
+    {
+      latestPacketFreshnessPeriod_ = latestPacketFreshnessPeriod;
+    }
 
     void
     onNamespaceSet(Namespace* nameSpace);
@@ -166,6 +192,7 @@ private:
     Namespace* latestNamespace_;
     int producedSequenceNumber_;
     int pipelineSize_;
+    ndn::Milliseconds latestPacketFreshnessPeriod_;
     GeneralizedObjectHandler generalizedObjectHandler_;
   };
 

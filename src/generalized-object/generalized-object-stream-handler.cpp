@@ -34,7 +34,8 @@ GeneralizedObjectStreamHandler::Impl::Impl
    const OnSequencedGeneralizedObject& onSequencedGeneralizedObject)
 : pipelineSize_(pipelineSize),
   onSequencedGeneralizedObject_(onSequencedGeneralizedObject), namespace_(0),
-  latestNamespace_(0), producedSequenceNumber_(-1)
+  latestNamespace_(0), producedSequenceNumber_(-1),
+  latestPacketFreshnessPeriod_(1000.0)
 {
 }
 
@@ -88,8 +89,7 @@ GeneralizedObjectStreamHandler::Impl::onObjectNeeded
     Namespace& versionedLatest =
       (*latestNamespace_)[Name::Component::fromVersion((uint64_t)ndn_getNowMilliseconds())];
     MetaInfo metaInfo;
-    // Debug: Get the correct freshness period.
-    metaInfo.setFreshnessPeriod(1000);
+    metaInfo.setFreshnessPeriod(latestPacketFreshnessPeriod_);
     versionedLatest.setNewDataMetaInfo(metaInfo);
     // Make the Data packet and reply to outstanding Interests.
     versionedLatest.serializeObject(ptr_lib::make_shared<BlobObject>
