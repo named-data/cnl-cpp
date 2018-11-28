@@ -317,20 +317,23 @@ public:
 
   /**
    * Attach the Data packet to this Namespace and satisfy pending Interests for
-   * it. However, if a Data packet is already attached, do nothing. This does
-   * not update the Namespace state, decrypt, verify or deserialize.
+   * it. However, if a Data packet is already attached, do nothing and return
+   * true. This does not update the Namespace state, decrypt, verify or
+   * deserialize.
    * @param data The Data packet object whose name must equal the name in this
    * Namespace node. To get the right Namespace, you can use
    * getChild(data.getName()). For efficiency, this does not copy the Data
    * packet object. If your application may change the object later, then you
    * must call setData with a copy of the object.
+   * @return True if the Data packet is attached, false if a Data packet was
+   * already attached.
    * @throws runtime_error if the Data packet name does not equal the name of
    * this Namespace node.
    */
-  void
+  bool
   setData(const ndn::ptr_lib::shared_ptr<ndn::Data>& data)
   {
-    impl_->setData(data);
+    return impl_->setData(data);
   }
 
   /**
@@ -689,7 +692,7 @@ public:
     void
     serializeObject(const ndn::ptr_lib::shared_ptr<Object>& object);
 
-    void
+    bool
     setData(const ndn::ptr_lib::shared_ptr<ndn::Data>& data);
 
     const ndn::ptr_lib::shared_ptr<ndn::Data>&

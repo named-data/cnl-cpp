@@ -191,12 +191,12 @@ Namespace::Impl::serializeObject(const ptr_lib::shared_ptr<Object>& object)
   setState(NamespaceState_OBJECT_READY);
 }
 
-void
+bool
 Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
 {
   if (data_)
     // We already have an attached object.
-    return;
+    return false;
   if (!data->getName().equals(name_))
     throw runtime_error
       ("The Data packet name does not equal the name of this Namespace node");
@@ -213,9 +213,7 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
     freshnessExpiryTimeMilliseconds_ = -1.0;
   data_ = data;
 
-  // TODO: This is presumably called by the application in the producer pipeline
-  // (who may have already serialized and encrypted), but should we decrypt and
-  // deserialize?
+  return true;
 }
 
 uint64_t
@@ -649,8 +647,9 @@ Namespace::Impl::onData
    const ptr_lib::shared_ptr<Data>& data)
 {
   Namespace& dataNamespace = getChild(data->getName());
-  // setData will set the state to DATA_RECEIVED.
-  dataNamespace.setData(data);
+  if (!dataNamespace.setData(data))
+    // A Data packet is already attached.
+    return;
   setState(NamespaceState_DATA_RECEIVED);
 
   // TODO: Start the validator.
