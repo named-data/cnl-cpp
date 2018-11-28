@@ -86,6 +86,16 @@ public:
   SegmentedObjectHandler&
   getSegmentedObjectHandler() { return impl_->getSegmentedObjectHandler(); }
 
+  /**
+   * Create a _meta packet with the given contentType and as a child of the
+   * given Namespace. If the object is large enough to require segmenting, also
+   * segment the object and create child segment packets plus a signature
+   * _manifest packet of the given Namespace.
+   * @param nameSpace The Namespace to append segment packets to. This
+   * ignores the Namespace from setNamespace().
+   * @param object The object to segment.
+   * @param contentType The content type for the content _meta packet.
+   */
   void
   setObject
     (Namespace& nameSpace, const ndn::Blob& object,

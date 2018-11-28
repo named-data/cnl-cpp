@@ -54,7 +54,7 @@ GeneralizedObjectHandler::Impl::setObject
   contentMetaInfo.setHasSegments(hasSegments);
 
   if (hasSegments)
-    segmentedObjectHandler_->setObject(nameSpace, object);
+    segmentedObjectHandler_->setObject(nameSpace, object, true);
   else
     // We don't need to segment. Put the object in the "other" field.
     contentMetaInfo.setOther(object);
