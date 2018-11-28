@@ -63,6 +63,28 @@ public:
   {
   }
 
+  /**
+   * Increment the produced sequence number and prepare the generalized object
+   * as a child of the new sequence number Namespace node under the
+   * getNamespace() node, according to GeneralizedObjectHandler.setObject.
+   * Also prepare to answer requests for the _latest packet which refer to the
+   * new sequence number Name.
+   * @param object The object to segment.
+   * @param contentType The content type for the content _meta packet.
+   */
+  void
+  addObject(const ndn::Blob& object, const std::string& contentType)
+  {
+    impl_->addObject(object, contentType);
+  }
+
+  /**
+   * Get the latest produced sequence number.
+   * @return The latest produced sequence number, or -1 if none have been produced.
+   */
+  int
+  getProducedSequenceNumber() { return impl_->getProducedSequenceNumber(); }
+
   static const ndn::Name::Component&
   getNAME_COMPONENT_LATEST() { return getValues().NAME_COMPONENT_LATEST; }
 
@@ -86,12 +108,21 @@ private:
     Impl(const OnSequencedGeneralizedObject& onSequencedGeneralizedObject);
 
     void
+    addObject(const ndn::Blob& object, const std::string& contentType);
+
+    int
+    getProducedSequenceNumber() { return producedSequenceNumber_; }
+
+    void
     onNamespaceSet(Namespace* nameSpace);
 
   private:
     /**
-     * This is called for object needed at the Handler's namespace. Start
-     * fetching the _latest packet.
+     * This is called for object needed at the Handler's namespace. If
+     * neededNamespace is the Handler's Namespace (called by the appliction),
+     * then start fetching the _latest packet. If neededNamespace is for the
+     * _latest packet (from an incoming Interest), produce the _latest packet
+     * for the current sequence number.
      */
     bool
     onObjectNeeded
@@ -103,7 +134,7 @@ private:
      * _latest packet, it calls onStateChanged immediately.
      */
     void
-    latestNeeded() { latestNamespace_->objectNeeded(); }
+    latestNeeded() { latestNamespace_->objectNeeded(true); }
 
     /**
      * This is called when a packet arrives. Parse the _latest packet and start
@@ -128,6 +159,8 @@ private:
     OnSequencedGeneralizedObject onSequencedGeneralizedObject_;
     Namespace* namespace_;
     Namespace* latestNamespace_;
+    int producedSequenceNumber_;
+    GeneralizedObjectHandler generalizedObjectHandler_;
   };
 
   /**

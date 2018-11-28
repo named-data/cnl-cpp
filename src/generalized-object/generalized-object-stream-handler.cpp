@@ -32,8 +32,22 @@ namespace cnl_cpp {
 GeneralizedObjectStreamHandler::Impl::Impl
   (const OnSequencedGeneralizedObject& onSequencedGeneralizedObject)
 : onSequencedGeneralizedObject_(onSequencedGeneralizedObject), namespace_(0),
-  latestNamespace_(0)
+  latestNamespace_(0), producedSequenceNumber_(-1)
 {
+}
+
+void
+GeneralizedObjectStreamHandler::Impl::addObject
+  (const ndn::Blob& object, const std::string& contentType)
+{
+  if (!namespace_)
+    throw runtime_error
+      ("GeneralizedObjectStreamHandler.addObject: The Namespace is not set");
+
+  ++producedSequenceNumber_;
+  Namespace& sequenceNamespace =
+    (*namespace_)[Name::Component::fromSequenceNumber(producedSequenceNumber_)];
+  generalizedObjectHandler_.setObject(sequenceNamespace, object, contentType);
 }
 
 void
@@ -56,14 +70,33 @@ bool
 GeneralizedObjectStreamHandler::Impl::onObjectNeeded
   (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId)
 {
-  if (&neededNamespace != namespace_)
-    // Don't respond for child namespaces (including when we call objectNeeded
-    // on the _latest child below).
-    return false;
+  if (&neededNamespace == namespace_) {
+    // Assume this is called by a consumer. Fetch the first _latest packet.
+    latestNeeded();
+    return true;
+  }
 
-  // Fetch the first _latest packet.
-  latestNeeded();
-  return true;
+  if (&neededNamespace == latestNamespace_ && producedSequenceNumber_ >= 0) {
+    // Produce the _latest Data packet.
+    Name sequenceName = Name(namespace_->getName()).append
+      (Name::Component::fromSequenceNumber(producedSequenceNumber_));
+    DelegationSet delegations;
+    delegations.add(1, sequenceName);
+
+    Namespace& versionedLatest =
+      (*latestNamespace_)[Name::Component::fromVersion((uint64_t)ndn_getNowMilliseconds())];
+    MetaInfo metaInfo;
+    // Debug: Get the correct freshness period.
+    metaInfo.setFreshnessPeriod(1000);
+    versionedLatest.setNewDataMetaInfo(metaInfo);
+    // Make the Data packet and reply to outstanding Interests.
+    versionedLatest.serializeObject(ptr_lib::make_shared<BlobObject>
+      (delegations.wireEncode()));
+
+    return true;
+  }
+
+  return false;
 }
 
 void
@@ -93,13 +126,13 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
 
   if (!targetNamespace.getObject()) {
     // Fetch the target.
-    int targetSequenceNumber = (int)targetName[-1].toNumber();
+    int targetSequenceNumber = (int)targetName[-1].toSequenceNumber();
     // Debug: Do we have to attach a new handler for each sequence number?
     ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
       ptr_lib::make_shared<GeneralizedObjectHandler>
         (bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
               shared_from_this(), _1, _2, targetSequenceNumber));
-    targetNamespace.setHandler(generalizedObjectHandler).objectNeeded(true);
+    targetNamespace.setHandler(generalizedObjectHandler).objectNeeded();
   }
   
   // Schedule to fetch the next _latest packet.
