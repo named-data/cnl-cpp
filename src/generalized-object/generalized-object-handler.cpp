@@ -44,13 +44,21 @@ void
 GeneralizedObjectHandler::Impl::setObject
   (Namespace& nameSpace, const Blob& object, const string& contentType)
 {
+  bool hasSegments =
+    (object.size() > segmentedObjectHandler_->getMaxSegmentPayloadLength());
+
   // Prepare the _meta packet.
   ContentMetaInfo contentMetaInfo;
   contentMetaInfo.setContentType(contentType);
   contentMetaInfo.setTimestamp(ndn_getNowMilliseconds());
-  contentMetaInfo.setHasSegments(false);
-  // TODO: Serialize and segment.
-  contentMetaInfo.setOther(object);
+  contentMetaInfo.setHasSegments(hasSegments);
+
+  if (hasSegments)
+    segmentedObjectHandler_->setObject(nameSpace, object);
+  else
+    // We don't need to segment. Put the object in the "other" field.
+    contentMetaInfo.setOther(object);
+
   nameSpace[getNAME_COMPONENT_META()].serializeObject
     (ptr_lib::make_shared<BlobObject>(contentMetaInfo.wireEncode()));
 }
@@ -105,7 +113,8 @@ GeneralizedObjectHandler::Impl::canDeserialize
       (bind(&GeneralizedObjectHandler::Impl::onSegmentedObject,
        shared_from_this(), _1, contentMetaInfo));
     segmentedObjectHandler_->setNamespace(namespace_);
-    namespace_->objectNeeded();
+    // Explicitly request segment 0 to avoid fetching _meta, etc.
+    (*namespace_)[Name::Component::fromSegment(0)].objectNeeded();
 
     // TODO: Fetch the _manifest packet. How to override per-packet verification?
   }
