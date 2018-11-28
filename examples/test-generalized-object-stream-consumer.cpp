@@ -41,7 +41,6 @@ int main(int argc, char** argv)
     Namespace stream("/ndn/eb/stream/run/28/annotations");
     stream.setFace(&face);
 
-    bool enabled = true;
     // This is called to print the content of each streamed object when it arrives.
     auto onNewObject = [&]
       (int sequenceNumber,
@@ -50,13 +49,12 @@ int main(int argc, char** argv)
       cout << "Got generalized object, sequenceNumber " << sequenceNumber <<
         ", content-type " << contentMetaInfo->getContentType() << ": " <<
         ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
-      enabled = false;
     };
     stream.setHandler
       (ptr_lib::make_shared<GeneralizedObjectStreamHandler>
        (onNewObject)).objectNeeded();
 
-    while (enabled) {
+    while (true) {
       face.processEvents();
       // We need to sleep for a few milliseconds so we don't use 100% of the CPU.
       usleep(10000);
