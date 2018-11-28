@@ -78,86 +78,20 @@ public:
   }
 
   /**
-   * Add an onSegment callback. When a new segment is available, this calls
-   * onSegment as described below. Segments are supplied in order.
-   * This is only used if the ContentMetaInfo hasSegments flag is true.
-   * @param onSegment This calls
-   * onSegment(segmentNamespace) where segmentNamespace is the Namespace where
-   * you can use segmentNamespace.getObject(). You must check if
-   * segmentNamespace is null because after supplying the final segment, this
-   * calls onSegment(null) to signal the "end of stream".
-   * NOTE: The library will log any exceptions thrown by this callback, but for
-   * better error handling the callback should catch and properly handle any
-   * exceptions.
-   * @return The callback ID which you can use in removeCallback().
+   * Get the SegmentedObjectHandler which is used to segment an object and fetch
+   * segments. You can use this to set parameters such as
+   * getSegmentedObjectHandler().setInterestPipelineSize().
+   * @return The SegmentedObjectHandler.
    */
-  uint64_t
-  addOnSegment(const SegmentedObjectHandler::OnSegment& onSegment)
-  {
-    return impl_->addOnSegment(onSegment);
-  }
-
-  /**
-   * Remove the callback with the given callbackId. This does not search for the
-   * callbackId in child nodes. If the callbackId isn't found, do nothing.
-   * This is only used if the ContentMetaInfo hasSegments flag is true.
-   * @param callbackId The callback ID returned, for example, from
-   * addOnSegment.
-   */
-  void
-  removeCallback(uint64_t callbackId) { impl_->removeCallback(callbackId); }
-
-  /**
-   * Get the number of outstanding interests which this maintains while fetching
-   * segments.
-   * This is only used if the ContentMetaInfo hasSegments flag is true.
-   * @return The Interest pipeline size.
-   */
-  int
-  getInterestPipelineSize() { return impl_->getInterestPipelineSize(); }
-
-  /**
-   * Set the number of outstanding interests which this maintains while fetching
-   * segments.
-   * This is only used if the ContentMetaInfo hasSegments flag is true.
-   * @param interestPipelineSize The Interest pipeline size.
-   * @throws runtime_error if interestPipelineSize is less than 1.
-   */
-  void
-  setInterestPipelineSize(int interestPipelineSize)
-  {
-    impl_->setInterestPipelineSize(interestPipelineSize);
-  }
-
-  /**
-   * Get the initial Interest count (as described in setInitialInterestCount).
-   * This is only used if the ContentMetaInfo hasSegments flag is true.
-   * @return The initial Interest count.
-   */
-  int
-  getInitialInterestCount() { return impl_->getInitialInterestCount(); }
-
-  /**
-   * Set the number of initial Interests to send for segments. By default this
-   * just sends an Interest for the first segment and waits for the response
-   * before fetching more segments, but if you know the number of segments you
-   * can reduce latency by initially requesting more segments. (However, you
-   * should not use a number larger than the Interest pipeline size.)
-   * This is only used if the ContentMetaInfo hasSegments flag is true.
-   * @param initialInterestCount The initial Interest count.
-   * @throws runtime_error if initialInterestCount is less than 1.
-   */
-  void
-  setInitialInterestCount(int initialInterestCount)
-  {
-    impl_->setInitialInterestCount(initialInterestCount);
-  }
+  SegmentedObjectHandler&
+  getSegmentedObjectHandler() { return impl_->getSegmentedObjectHandler(); }
 
   void
   setObject
-    (Namespace& nameSpace, const ndn::Blob& obj, const std::string& contentType)
+    (Namespace& nameSpace, const ndn::Blob& object,
+     const std::string& contentType)
   {
-    impl_->setObject(nameSpace, obj, contentType);
+    impl_->setObject(nameSpace, object, contentType);
   }
 
   static const ndn::Name::Component&
@@ -199,51 +133,13 @@ private:
     void
     onNamespaceSet(Namespace* nameSpace);
 
-    uint64_t
-    addOnSegment(const SegmentStreamHandler::OnSegment& onSegment)
-    {
-      // Pass through to the segmentedObjectHandler_.
-      return segmentedObjectHandler_->addOnSegment(onSegment);
-    }
-
-    void
-    removeCallback(uint64_t callbackId)
-    {
-      // Pass through to the segmentedObjectHandler_.
-      segmentedObjectHandler_->removeCallback(callbackId);
-    }
-
-    int
-    getInterestPipelineSize()
-    {
-      // Pass through to the segmentedObjectHandler_.
-      return segmentedObjectHandler_->getInterestPipelineSize();
-    }
-
-    void
-    setInterestPipelineSize(int interestPipelineSize)
-    {
-      // Pass through to the segmentedObjectHandler_.
-      segmentedObjectHandler_->setInterestPipelineSize(interestPipelineSize);
-    }
-
-    int
-    getInitialInterestCount()
-    {
-      // Pass through to the segmentedObjectHandler_.
-      return segmentedObjectHandler_->getInitialInterestCount();
-    }
-
-    void
-    setInitialInterestCount(int initialInterestCount)
-    {
-      // Pass through to the segmentedObjectHandler_.
-      segmentedObjectHandler_->setInitialInterestCount(initialInterestCount);
-    }
+    SegmentedObjectHandler&
+    getSegmentedObjectHandler() { return *segmentedObjectHandler_; }
 
     void
     setObject
-      (Namespace& nameSpace, const ndn::Blob& obj, const std::string& contentType);
+      (Namespace& nameSpace, const ndn::Blob& object,
+       const std::string& contentType);
 
     bool
     canDeserialize

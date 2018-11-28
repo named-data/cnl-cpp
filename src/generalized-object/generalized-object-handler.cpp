@@ -42,7 +42,7 @@ GeneralizedObjectHandler::Impl::Impl(const OnGeneralizedObject& onGeneralizedObj
 
 void
 GeneralizedObjectHandler::Impl::setObject
-  (Namespace& nameSpace, const Blob& obj, const string& contentType)
+  (Namespace& nameSpace, const Blob& object, const string& contentType)
 {
   // Prepare the _meta packet.
   ContentMetaInfo contentMetaInfo;
@@ -50,7 +50,7 @@ GeneralizedObjectHandler::Impl::setObject
   contentMetaInfo.setTimestamp(ndn_getNowMilliseconds());
   contentMetaInfo.setHasSegments(false);
   // TODO: Serialize and segment.
-  contentMetaInfo.setOther(obj);
+  contentMetaInfo.setOther(object);
   nameSpace[getNAME_COMPONENT_META()].serializeObject
     (ptr_lib::make_shared<BlobObject>(contentMetaInfo.wireEncode()));
 }
