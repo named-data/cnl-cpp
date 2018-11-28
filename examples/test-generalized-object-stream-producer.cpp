@@ -140,6 +140,14 @@ static uint8_t DEFAULT_RSA_PRIVATE_KEY_DER[] = {
   0xcb, 0xea, 0x8f
 };
 
+static string
+toString(int x)
+{
+  char buf[20];
+  sprintf(buf, "%d", x);
+  return string(buf);
+}
+
 int main(int argc, char** argv)
 {
   try {
@@ -172,10 +180,9 @@ int main(int argc, char** argv)
       if (now >= previousPublishMs + publishIntervalMs) {
         cout << "Preparing data for sequence " <<
           (handler->getProducedSequenceNumber() + 1) << endl;
-        char buf[20];
-        sprintf(buf, "%d", handler->getProducedSequenceNumber() + 1);
         handler->addObject
-          (Blob::fromRawStr(string("Payload ") + buf), "application/json");
+          (Blob::fromRawStr("Payload " + toString(handler->getProducedSequenceNumber() + 1)),
+           "application/json");
 
         previousPublishMs = now;
       }
