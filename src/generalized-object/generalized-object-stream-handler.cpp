@@ -30,8 +30,10 @@ using namespace ndn::func_lib;
 namespace cnl_cpp {
 
 GeneralizedObjectStreamHandler::Impl::Impl
-  (const OnSequencedGeneralizedObject& onSequencedGeneralizedObject)
-: onSequencedGeneralizedObject_(onSequencedGeneralizedObject), namespace_(0),
+  (int pipelineSize,
+   const OnSequencedGeneralizedObject& onSequencedGeneralizedObject)
+: pipelineSize_(pipelineSize),
+  onSequencedGeneralizedObject_(onSequencedGeneralizedObject), namespace_(0),
   latestNamespace_(0), producedSequenceNumber_(-1)
 {
 }

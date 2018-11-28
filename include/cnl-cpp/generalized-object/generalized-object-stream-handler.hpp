@@ -41,6 +41,8 @@ public:
   /**
    * Create a GeneralizedObjectStreamHandler with the optional
    * onSequencedGeneralizedObject callback.
+   * @param pipelineSize (optional) The pipeline size (number of objects, not
+   * interests).
    * @param onSequencedGeneralizedObject (optional) When the ContentMetaInfo is
    * received for a new sequence number and the hasSegments is false, this calls
    * onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, object) where
@@ -57,9 +59,11 @@ public:
    * listen for the OBJECT_READY state.
    */
   GeneralizedObjectStreamHandler
-    (const OnSequencedGeneralizedObject& onSequencedGeneralizedObject =
+    (int pipelineSize = 8,
+     const OnSequencedGeneralizedObject& onSequencedGeneralizedObject =
        OnSequencedGeneralizedObject())
-  : impl_(ndn::ptr_lib::make_shared<Impl>(onSequencedGeneralizedObject))
+  : impl_(ndn::ptr_lib::make_shared<Impl>
+          (pipelineSize, onSequencedGeneralizedObject))
   {
   }
 
@@ -105,7 +109,8 @@ private:
      * Create a new Impl, which should belong to a shared_ptr.
      * @param onSegmentedObject See the GeneralizedObjectHandler constructor.
      */
-    Impl(const OnSequencedGeneralizedObject& onSequencedGeneralizedObject);
+    Impl(int pipelineSize,
+         const OnSequencedGeneralizedObject& onSequencedGeneralizedObject);
 
     void
     addObject(const ndn::Blob& object, const std::string& contentType);
@@ -160,6 +165,7 @@ private:
     Namespace* namespace_;
     Namespace* latestNamespace_;
     int producedSequenceNumber_;
+    int pipelineSize_;
     GeneralizedObjectHandler generalizedObjectHandler_;
   };
 
