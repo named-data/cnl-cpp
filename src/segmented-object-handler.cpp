@@ -32,7 +32,7 @@ INIT_LOGGER("cnl_cpp.SegmentedObjectHandler");
 namespace cnl_cpp {
 
 SegmentedObjectHandler::Impl::Impl(const OnDeserialized& onSegmentedObject)
-: finished_(false), totalSize_(0), namespace_(0)
+: finished_(false), totalSize_(0), namespace_(0), maxSegmentPayloadLength_(8192)
 {
   if (onSegmentedObject)
     addOnSegmentedObject(onSegmentedObject);
@@ -58,6 +58,52 @@ void
 SegmentedObjectHandler::Impl::removeCallback(uint64_t callbackId)
 {
   onSegmentedObjectCallbacks_.erase(callbackId);
+}
+
+void
+SegmentedObjectHandler::Impl::setMaxSegmentPayloadLength
+  (size_t maxSegmentPayloadLength)
+{
+  if (maxSegmentPayloadLength < 1)
+    throw runtime_error("The maximum segment payload length must be at least 1");
+  maxSegmentPayloadLength_ = maxSegmentPayloadLength;
+}
+
+void
+SegmentedObjectHandler::Impl::setObject
+  (Namespace& nameSpace, const ndn::Blob& object)
+{
+  // TODO: Option to create a _manifest.
+
+  // Get the final block ID.
+  uint64_t finalBlockId = 0;
+  // Instead of a brute calculation, imitate the loop we will use below.
+  uint64_t segment = 0;
+  for (size_t offset = 0; offset < object.size();
+       offset += maxSegmentPayloadLength_) {
+    finalBlockId = segment;
+    ++segment;
+  }
+
+  // Prepare the MetaInfo which we set at each segment Namespace to avoid
+  // polluting higher Namespace nodes.
+  MetaInfo metaInfo;
+  metaInfo.setFinalBlockId(Name().appendSegment(finalBlockId)[0]);
+
+  segment = 0;
+  for (size_t offset = 0; offset < object.size();
+       offset += maxSegmentPayloadLength_) {
+    size_t payloadLength = maxSegmentPayloadLength_;
+    if (offset + payloadLength > object.size())
+      payloadLength = object.size() - offset;
+
+    Namespace& segmentNamespace = nameSpace[Name::Component::fromSegment(segment)];
+    segmentNamespace.setNewDataMetaInfo(metaInfo);
+    segmentNamespace.serializeObject
+      (ptr_lib::make_shared<BlobObject>(Blob(object.buf() + offset, payloadLength)));
+
+    ++segment;
+  }
 }
 
 void

@@ -89,6 +89,31 @@ public:
   void
   removeCallback(uint64_t callbackId) { impl_->removeCallback(callbackId); }
 
+  /**
+   * Get the maximum length of the payload of one segment, used to split a
+   * larger payload into segments.
+   * @return The maximum payload length.
+   */
+  size_t
+  getMaxSegmentPayloadLength() { return impl_->getMaxSegmentPayloadLength(); }
+
+  /**
+   * Set the maximum length of the payload of one segment, used to split a
+   * larger payload into segments.
+   * @param maxSegmentPayloadLength The maximum payload length.
+   */
+  void
+  setMaxSegmentPayloadLength(size_t maxSegmentPayloadLength)
+  {
+    impl_->setMaxSegmentPayloadLength(maxSegmentPayloadLength);
+  }
+
+  void
+  setObject(Namespace& nameSpace, const ndn::Blob& object)
+  {
+    impl_->setObject(nameSpace, object);
+  }
+
 protected:
   virtual void
   onNamespaceSet()
@@ -129,6 +154,15 @@ private:
     void
     removeCallback(uint64_t callbackId);
 
+    size_t
+    getMaxSegmentPayloadLength() { return maxSegmentPayloadLength_; }
+
+    void
+    setMaxSegmentPayloadLength(size_t maxSegmentPayloadLength);
+
+    void
+    setObject(Namespace& nameSpace, const ndn::Blob& object);
+
     void
     onNamespaceSet(Namespace* nameSpace)
     {
@@ -150,6 +184,7 @@ private:
     // The key is the callback ID. The value is the OnSegmentedObject function.
     std::map<uint64_t, OnDeserialized> onSegmentedObjectCallbacks_;
     Namespace* namespace_;
+    size_t maxSegmentPayloadLength_;
   };
 
   ndn::ptr_lib::shared_ptr<Impl> impl_;
