@@ -38,6 +38,24 @@ public:
      const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
      const ndn::ptr_lib::shared_ptr<Object>& object)> OnSequencedGeneralizedObject;
 
+  /**
+   * Create a GeneralizedObjectStreamHandler with the optional
+   * onSequencedGeneralizedObject callback.
+   * @param onSequencedGeneralizedObject (optional) When the ContentMetaInfo is
+   * received for a new sequence number and the hasSegments is false, this calls
+   * onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, object) where
+   * sequenceNumber is the new sequence number, contentMetaInfo is the
+   * ContentMetaInfo and object is the "other" info as a BlobObject or possibly
+   * deserialized into another type. If the hasSegments flag is true, when the
+   * segments are received and assembled into a single block of memory, this
+   * calls onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, object)
+   * where sequenceNumber is the new sequence number, contentMetaInfo is the
+   * ContentMetaInfo and object is the object that was assembled from the
+   * segment contents as a BlobObject or possibly deserialized to another type.
+   * If you don't supply an onGeneralizedObject callback here, you can call
+   * addOnStateChanged on the Namespace object to which this is attached and
+   * listen for the OBJECT_READY state.
+   */
   GeneralizedObjectStreamHandler
     (const OnSequencedGeneralizedObject& onSequencedGeneralizedObject =
        OnSequencedGeneralizedObject())
@@ -71,13 +89,45 @@ private:
     onNamespaceSet(Namespace* nameSpace);
 
   private:
+    /**
+     * This is called for object needed at the Handler's namespace. Start
+     * fetching the _latest packet.
+     */
     bool
     onObjectNeeded
-      (Namespace& nameSpace, Namespace& neededNamespace,
+      (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId);
+
+    /**
+     * This is called repeatedly to fetch the _latest packet and call
+     * onStateChanged with OBJECT_READY. If the library already has a fresh
+     * _latest packet, it calls onStateChanged immediately.
+     */
+    void
+    latestNeeded() { latestNamespace_->objectNeeded(); }
+
+    /**
+     * This is called when a packet arrives. Parse the _latest packet and start
+     * fetching the GeneralizedObject under the sequence name component.
+     */
+    void
+    onStateChanged
+      (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
        uint64_t callbackId);
+
+    /**
+     * This is called when the GeneralizedObject arrives. Call the
+     * OnSequencedGeneralizedObject callback, where we pass through the
+     * sequenceNumber.
+     */
+    void
+    onGeneralizedObject
+      (const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
+       const ndn::ptr_lib::shared_ptr<Object>& object,
+       int sequenceNumber);
 
     OnSequencedGeneralizedObject onSequencedGeneralizedObject_;
     Namespace* namespace_;
+    Namespace* latestNamespace_;
   };
 
   /**
