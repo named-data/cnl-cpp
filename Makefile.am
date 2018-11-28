@@ -21,7 +21,8 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libcnl-cpp.pc
 
 noinst_PROGRAMS = bin/test-generalized-object-consumer \
-  bin/test-generalized-object-producer bin/test-nac-consumer \
+  bin/test-generalized-object-producer bin/test-generalized-object-stream-consumer \
+  bin/test-generalized-object-stream-producer bin/test-nac-consumer \
   bin/test-nac-producer bin/test-segmented
 
 # Public C++ headers.
@@ -33,7 +34,8 @@ cnl_cpp_cpp_headers = \
   include/cnl-cpp/segment-stream-handler.hpp \
   include/cnl-cpp/segmented-object-handler.hpp \
   include/cnl-cpp/generalized-object/content-meta-info-object.hpp \
-  include/cnl-cpp/generalized-object/generalized-object-handler.hpp
+  include/cnl-cpp/generalized-object/generalized-object-handler.hpp \
+  include/cnl-cpp/generalized-object/generalized-object-stream-handler.hpp
 
 # C++ code.
 libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
@@ -42,6 +44,7 @@ libcnl_cpp_la_SOURCES = ${cnl_cpp_cpp_headers} \
   src/segment-stream-handler.cpp \
   src/segmented-object-handler.cpp \
   src//generalized-object/generalized-object-handler.cpp \
+  src//generalized-object/generalized-object-stream-handler.cpp \
   src/impl/pending-incoming-interest-table.cpp \
   src/impl/pending-incoming-interest-table.hpp
 
@@ -50,6 +53,12 @@ bin_test_generalized_object_consumer_LDADD = libcnl-cpp.la
 
 bin_test_generalized_object_producer_SOURCES = examples/test-generalized-object-producer.cpp
 bin_test_generalized_object_producer_LDADD = libcnl-cpp.la
+
+bin_test_generalized_object_stream_consumer_SOURCES = examples/test-generalized-object-stream-consumer.cpp
+bin_test_generalized_object_stream_consumer_LDADD = libcnl-cpp.la
+
+bin_test_generalized_object_stream_producer_SOURCES = examples/test-generalized-object-stream-producer.cpp
+bin_test_generalized_object_stream_producer_LDADD = libcnl-cpp.la
 
 bin_test_nac_consumer_SOURCES = examples/test-nac-consumer.cpp
 bin_test_nac_consumer_LDADD = libcnl-cpp.la
