@@ -160,7 +160,7 @@ Namespace::Impl::serializeObject(const ptr_lib::shared_ptr<Object>& object)
       throw runtime_error
         ("serializeObject: For the default serialize, the object must be a Blob");
 
-  KeyChain* keyChain = getKeyChain();
+  KeyChain* keyChain = getKeyChain_();
   if (!keyChain)
     throw runtime_error
       ("serializeObject: There is no KeyChain, so can't serialize " +
@@ -344,7 +344,7 @@ Namespace::Impl::getFace_()
 }
 
 KeyChain*
-Namespace::Impl::getKeyChain()
+Namespace::Impl::getKeyChain_()
 {
   Namespace* nameSpace = &outerNamespace_;
   while (nameSpace) {

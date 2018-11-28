@@ -586,6 +586,15 @@ public:
   ndn::Face*
   getFace_() { return impl_->getFace_(); }
 
+  /**
+   * Get the KeyChain set by setKeyChain (or the NameSpace constructor) on
+   * this or a parent Namespace node. This method name has an underscore because
+   * is normally only called from a Handler, not from the application.
+   * @return The KeyChain, or null if not set on this or any parent.
+   */
+  ndn::KeyChain*
+  getKeyChain_() { return impl_->getKeyChain_(); }
+
   Namespace&
   operator [] (const ndn::Name::Component& component)
   {
@@ -704,13 +713,8 @@ public:
     void
     setDecryptor(ndn::DecryptorV2* decryptor) { decryptor_ = decryptor; }
 
-    /**
-     * Get the KeyChain set by setKeyChain (or the NameSpace constructor) on
-     * this or a parent Namespace node.
-     * @return The KeyChain, or null if not set on this or any parent.
-     */
     ndn::KeyChain*
-    getKeyChain();
+    getKeyChain_();
 
     Namespace&
     setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler);
