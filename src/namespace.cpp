@@ -276,14 +276,19 @@ Namespace::Impl::setHandler(const ptr_lib::shared_ptr<Handler>& handler)
 }
 
 void
-Namespace::Impl::objectNeeded()
+Namespace::Impl::objectNeeded(bool mustBeFresh)
 {
-  // Debug: Allow mustBeFresh == false?
-  // Debug: Check if already have a child object?
-  if (object_)
-    // We already have the object.
-    // Debug: (But maybe we don't have the _data and we need it?)
+  // Check if we already have the object.
+  Interest interest(name_);
+  interest.setMustBeFresh(mustBeFresh);
+  // Debug: This requires a Data packet. Check for an object without one?
+  Namespace* bestMatch = findBestMatchName
+    (this->outerNamespace_, interest, ndn_getNowMilliseconds());
+  if (bestMatch && bestMatch->impl_->object_) {
+    // Set the state again to fire the callbacks.
+    bestMatch->impl_->setState(NamespaceState_OBJECT_READY);
     return;
+  }
 
   // Ask all OnObjectNeeded callbacks if they can produce.
   bool canProduce = false;
@@ -302,22 +307,14 @@ Namespace::Impl::objectNeeded()
     return;
   }
 
-  // Debug: Need an Interest template?
-  expressInterest(0);
-}
-
-void
-Namespace::Impl::expressInterest(const Interest *interestTemplate)
-{
+  // Express the interest.
   Face* face = getFace_();
   if (!face)
     throw runtime_error("A Face object has not been set for this or a parent");
-
   // TODO: What if the state is already INTEREST_EXPRESSED?
   setState(NamespaceState_INTEREST_EXPRESSED);
-
   face->expressInterest
-    (name_, interestTemplate,
+    (interest,
      bind(&Namespace::Impl::onData, shared_from_this(), _1, _2),
      ExponentialReExpress::makeOnTimeout
        (face, bind(&Namespace::Impl::onData, shared_from_this(), _1, _2),

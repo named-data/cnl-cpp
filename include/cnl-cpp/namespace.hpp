@@ -525,7 +525,7 @@ public:
   }
 
   void
-  objectNeeded() { impl_->objectNeeded(); }
+  objectNeeded(bool mustBeFresh = true) { impl_->objectNeeded(mustBeFresh); }
 
   /**
    * Set the maximum lifetime for re-expressed interests to be used when this or
@@ -538,30 +538,6 @@ public:
   setMaxInterestLifetime(ndn::Milliseconds maxInterestLifetime)
   {
     impl_->setMaxInterestLifetime(maxInterestLifetime);
-  }
-
-  /**
-   * Call expressInterest on this (or a parent's) Face where the interest name
-   * is the name of this Namespace node. When the Data packet is received this
-   * calls setData, so you should use a callback with addOnStateChanged. This
-   * uses ExponentialReExpress to re-express a timed-out interest with longer
-   * lifetimes, with a maximum determined by setMaxInterestLifetime(). If the
-   * Interest times out, this sets the state to NamespaceState_INTEREST_TIMEOUT
-   * and calls the OnStateChanged callbacks. If this receives a network Nack,
-   * this stores the NetworkNack object which you can access with
-   * getNetworkNack(), sets the state to NamespaceState_INTEREST_NETWORK_NACK,
-   * and calls the OnStateChanged callbacks.
-   * TODO: Replace this by a mechanism for requesting a Data object which is
-   * more general than a Face network operation.
-   * @param interestTemplate (optional) The interest template for
-   * expressInterest. If omitted, just use a default interest lifetime.
-   * @throws runtime_error if a Face object has not been set for this or a
-   * parent Namespace node.
-   */
-  void
-  expressInterest(const ndn::Interest *interestTemplate = 0)
-  {
-    impl_->expressInterest(interestTemplate);
   }
 
   /**
@@ -740,16 +716,13 @@ public:
     setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler);
 
     void
-    objectNeeded();
+    objectNeeded(bool mustBeFresh);
 
     void
     setMaxInterestLifetime(ndn::Milliseconds maxInterestLifetime)
     {
       maxInterestLifetime_ = maxInterestLifetime;
     }
-
-    void
-    expressInterest(const ndn::Interest *interestTemplate);
 
     void
     removeCallback(uint64_t callbackId);
