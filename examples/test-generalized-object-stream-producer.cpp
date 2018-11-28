@@ -28,10 +28,12 @@
 #include <iostream>
 #include <unistd.h>
 #include <ndn-cpp/security/key-chain.hpp>
+#include <ndn-cpp/delegation-set.hpp>
 #include <cnl-cpp/generalized-object/generalized-object-stream-handler.hpp>
 
 using namespace std;
 using namespace ndn;
+using namespace ndn::func_lib;
 using namespace ndntools;
 using namespace cnl_cpp;
 
@@ -138,33 +140,6 @@ static uint8_t DEFAULT_RSA_PRIVATE_KEY_DER[] = {
   0xcb, 0xea, 0x8f
 };
 
-class TestProducer {
-public:
-  TestProducer(Namespace& stream)
-  : stream_(stream), sequenceNumber_(0), publishIntervalMs_(1000),
-    streamLatest_(stream_[GeneralizedObjectStreamHandler::getNAME_COMPONENT_LATEST()])
-  {
-  }
-
-  bool
-  onObjectNeeded
-    (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId)
-  {
-    if (&neededNamespace != &streamLatest_)
-      // Not a request for the _latest.
-      return false;
-
-    cout << "Debug objectNeeded " << neededNamespace.getName() << endl;
-
-    return true;
-  }
-
-  Namespace& stream_;
-  Namespace& streamLatest_;
-  int sequenceNumber_;
-  Milliseconds publishIntervalMs_;
-};
-
 int main(int argc, char** argv)
 {
   try {
@@ -179,7 +154,10 @@ int main(int argc, char** argv)
        Blob(DEFAULT_RSA_PUBLIC_KEY_DER, sizeof(DEFAULT_RSA_PUBLIC_KEY_DER))));
     face.setCommandSigningInfo(keyChain, keyChain.getDefaultCertificateName());
 
+    Milliseconds publishIntervalMs = 1000.0;
     Namespace stream("/ndn/eb/stream/run/28/annotations", &keyChain);
+    auto handler = ptr_lib::make_shared<GeneralizedObjectStreamHandler>();
+    stream.setHandler(handler);
 
     cout << "Register prefix " << stream.getName().toUri() << endl;
     // Set the face and register to receive Interests.
@@ -188,20 +166,16 @@ int main(int argc, char** argv)
         cout << "Register failed for prefix " << prefix->toUri() << endl;
       });
 
-    TestProducer producer(stream);
-
     MillisecondsSince1970 previousPublishMs = 0;
     while (true) {
       MillisecondsSince1970 now = ndn_getNowMilliseconds();
-      if (now >= previousPublishMs + producer.publishIntervalMs_) {
-        ++producer.sequenceNumber_;
+      if (now >= previousPublishMs + publishIntervalMs) {
+        cout << "Preparing data for sequence " <<
+          (handler->getProducedSequenceNumber() + 1) << endl;
         char buf[20];
-        sprintf(buf, "%d", producer.sequenceNumber_);
-        Namespace& sequenceNamespace = stream[Blob::fromRawStr(buf)];
-        cout << "Preparing data for" << sequenceNamespace.getName() << endl;
-        GeneralizedObjectHandler().setObject
-          (sequenceNamespace, 
-           Blob::fromRawStr(string("Payload ") + buf), "application/json");
+        sprintf(buf, "%d", handler->getProducedSequenceNumber() + 1);
+        handler->addObject
+          (Blob::fromRawStr(string("Payload ") + buf), "application/json");
 
         previousPublishMs = now;
       }
