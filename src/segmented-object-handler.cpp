@@ -170,4 +170,7 @@ SegmentedObjectHandler::Impl::fireOnSegmentedObject
   }
 }
 
+SegmentedObjectHandler::Values* SegmentedObjectHandler::values_ = 0;
+
+
 }

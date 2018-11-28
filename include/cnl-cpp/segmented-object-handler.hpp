@@ -114,6 +114,9 @@ public:
     impl_->setObject(nameSpace, object);
   }
 
+  static const ndn::Name::Component&
+  getNAME_COMPONENT_MANIFEST() { return getValues().NAME_COMPONENT_MANIFEST; }
+
 protected:
   virtual void
   onNamespaceSet()
@@ -187,7 +190,34 @@ private:
     size_t maxSegmentPayloadLength_;
   };
 
+  /**
+   * Values holds values used by the static member values_.
+   */
+  class Values {
+  public:
+    Values()
+    : NAME_COMPONENT_MANIFEST("_manifest")
+    {}
+
+    ndn::Name::Component NAME_COMPONENT_MANIFEST;
+  };
+
+  /**
+   * Get the static Values object, creating it if needed. We do this explicitly
+   * because some C++ environments don't handle static constructors well.
+   * @return The static Values object.
+   */
+  static Values&
+  getValues()
+  {
+    if (!values_)
+      values_ = new Values();
+
+    return *values_;
+  }
+
   ndn::ptr_lib::shared_ptr<Impl> impl_;
+  static Values* values_;
 };
 
 }

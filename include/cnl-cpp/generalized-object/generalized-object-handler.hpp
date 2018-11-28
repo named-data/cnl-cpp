@@ -97,9 +97,6 @@ public:
   static const ndn::Name::Component&
   getNAME_COMPONENT_META() { return getValues().NAME_COMPONENT_META; }
 
-  static const ndn::Name::Component&
-  getNAME_COMPONENT_MANIFEST() { return getValues().NAME_COMPONENT_MANIFEST; }
-
   /**
    * This is called by Namespace when a packet is received. If this is the
    * _meta packet, then decode it.
@@ -171,12 +168,10 @@ private:
   class Values {
   public:
     Values()
-    : NAME_COMPONENT_META("_meta"),
-      NAME_COMPONENT_MANIFEST("_manifest")
+    : NAME_COMPONENT_META("_meta")
     {}
 
     ndn::Name::Component NAME_COMPONENT_META;
-    ndn::Name::Component NAME_COMPONENT_MANIFEST;
   };
 
   /**
