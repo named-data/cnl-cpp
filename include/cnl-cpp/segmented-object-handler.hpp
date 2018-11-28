@@ -115,8 +115,8 @@ public:
    * @param object The object to segment.
    * @param useSignatureManifest (optional) If true, only use a
    * DigestSha256Signature on the segment packets and create a signed
-   * _manifest packet as a child of the given Namespace. If false, sign each
-   * segment packet individually.
+   * _manifest packet as a child of the given Namespace. If omitted or false,
+   * sign each segment packet individually.
    */
   void
   setObject
