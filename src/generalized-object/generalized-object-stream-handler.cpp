@@ -40,14 +40,14 @@ GeneralizedObjectStreamHandler::Impl::Impl
 }
 
 void
-GeneralizedObjectStreamHandler::Impl::addObject
-  (const ndn::Blob& object, const std::string& contentType)
+GeneralizedObjectStreamHandler::Impl::setObject
+  (int sequenceNumber, const ndn::Blob& object, const std::string& contentType)
 {
   if (!namespace_)
     throw runtime_error
-      ("GeneralizedObjectStreamHandler.addObject: The Namespace is not set");
+      ("GeneralizedObjectStreamHandler.setObject: The Namespace is not set");
 
-  ++producedSequenceNumber_;
+  producedSequenceNumber_ = sequenceNumber;
   Namespace& sequenceNamespace =
     (*namespace_)[Name::Component::fromSequenceNumber(producedSequenceNumber_)];
   generalizedObjectHandler_.setObject(sequenceNamespace, object, contentType);

@@ -68,18 +68,32 @@ public:
   }
 
   /**
-   * Increment the produced sequence number and prepare the generalized object
-   * as a child of the new sequence number Namespace node under the
-   * getNamespace() node, according to GeneralizedObjectHandler.setObject.
-   * Also prepare to answer requests for the _latest packet which refer to the
-   * new sequence number Name.
-   * @param object The object to segment.
+   * Prepare the generalized object as a child of the given sequence number
+   * Namespace node under the getNamespace() node, according to
+   * GeneralizedObjectHandler.setObject. Also prepare to answer requests for the
+   * _latest packet which refer to the given sequence number Name.
+   * @param sequenceNumber The sequence number to publish. This updates the
+   * value for getProducedSequenceNumber()
+   * @param object The object to publish as a Generalized Object.
+   * @param contentType The content type for the content _meta packet.
+   */
+  void
+  setObject
+    (int sequenceNumber, const ndn::Blob& object, const std::string& contentType)
+  {
+    impl_->setObject(sequenceNumber, object, contentType);
+  }
+
+  /**
+   * Publish an object for the next sequence number by calling setObject where
+   * the sequenceNumber is the current getProducedSequenceNumber() + 1.
+   * @param object The object to publish as a Generalized Object.
    * @param contentType The content type for the content _meta packet.
    */
   void
   addObject(const ndn::Blob& object, const std::string& contentType)
   {
-    impl_->addObject(object, contentType);
+    setObject(getProducedSequenceNumber() + 1, object, contentType);
   }
 
   /**
@@ -130,7 +144,9 @@ private:
          const OnSequencedGeneralizedObject& onSequencedGeneralizedObject);
 
     void
-    addObject(const ndn::Blob& object, const std::string& contentType);
+    setObject
+      (int sequenceNumber, const ndn::Blob& object,
+       const std::string& contentType);
 
     int
     getProducedSequenceNumber() { return producedSequenceNumber_; }
