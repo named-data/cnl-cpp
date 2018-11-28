@@ -19,8 +19,10 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
-#include <ndn-cpp/util/logging.hpp>
 #include <memory.h>
+#include <ndn-cpp/util/logging.hpp>
+#include <ndn-cpp/digest-sha256-signature.hpp>
+#include <ndn-cpp/lite/util/crypto-lite.hpp>
 #include <cnl-cpp/segmented-object-handler.hpp>
 
 using namespace std;
@@ -71,24 +73,36 @@ SegmentedObjectHandler::Impl::setMaxSegmentPayloadLength
 
 void
 SegmentedObjectHandler::Impl::setObject
-  (Namespace& nameSpace, const ndn::Blob& object)
+  (Namespace& nameSpace, const ndn::Blob& object, bool useSignatureManifest)
 {
-  // TODO: Option to create a _manifest.
+  KeyChain* keyChain = nameSpace.getKeyChain_();
+  if (!keyChain)
+    throw runtime_error("SegmentedObjectHandler.setObject: There is no KeyChain");
 
   // Get the final block ID.
-  uint64_t finalBlockId = 0;
+  uint64_t finalSegment = 0;
   // Instead of a brute calculation, imitate the loop we will use below.
   uint64_t segment = 0;
   for (size_t offset = 0; offset < object.size();
        offset += maxSegmentPayloadLength_) {
-    finalBlockId = segment;
+    finalSegment = segment;
     ++segment;
   }
+  Name::Component finalBlockId = Name().appendSegment(finalSegment)[0];
 
-  // Prepare the MetaInfo which we set at each segment Namespace to avoid
-  // polluting higher Namespace nodes.
-  MetaInfo metaInfo;
-  metaInfo.setFinalBlockId(Name().appendSegment(finalBlockId)[0]);
+  ptr_lib::shared_ptr<vector<uint8_t> > manifestContent;
+  DigestSha256Signature digestSignature;
+  if (useSignatureManifest) {
+    // Get ready to save the segment payload digests.
+    manifestContent.reset
+      (new vector<uint8_t>((finalSegment + 1) * ndn_SHA256_DIGEST_SIZE));
+    
+    // Use a DigestSha256Signature with all zeros.
+    ptr_lib::shared_ptr<vector<uint8_t> > zeros
+      (new vector<uint8_t>(ndn_SHA256_DIGEST_SIZE));
+    memset(&zeros->front(), 0, ndn_SHA256_DIGEST_SIZE);
+    digestSignature.setSignature(Blob(zeros, false));
+  }
 
   segment = 0;
   for (size_t offset = 0; offset < object.size();
@@ -97,13 +111,33 @@ SegmentedObjectHandler::Impl::setObject
     if (offset + payloadLength > object.size())
       payloadLength = object.size() - offset;
 
+    // Make the Data packet.
     Namespace& segmentNamespace = nameSpace[Name::Component::fromSegment(segment)];
-    segmentNamespace.setNewDataMetaInfo(metaInfo);
-    segmentNamespace.serializeObject
-      (ptr_lib::make_shared<BlobObject>(Blob(object.buf() + offset, payloadLength)));
+    ptr_lib::shared_ptr<Data> data =
+      ptr_lib::make_shared<Data>(segmentNamespace.getName());
+    data->getMetaInfo().setFinalBlockId(finalBlockId);
+    data->setContent(Blob(object.buf() + offset, payloadLength));
+
+    if (useSignatureManifest) {
+      data->setSignature(digestSignature);
+
+      // Append the digest of the data content to the manifestContent.
+      size_t digestOffset = segment * ndn_SHA256_DIGEST_SIZE;
+      CryptoLite::digestSha256
+        (data->getContent(), &manifestContent->front() + digestOffset);
+    }
+    else
+      keyChain->sign(*data);
+
+    segmentNamespace.setData(data);
 
     ++segment;
   }
+
+  if (useSignatureManifest)
+    // Create the _manifest data packet.
+    nameSpace[getNAME_COMPONENT_MANIFEST()].serializeObject
+      (ptr_lib::make_shared<BlobObject>(Blob(manifestContent, false)));
 }
 
 void

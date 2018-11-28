@@ -108,10 +108,22 @@ public:
     impl_->setMaxSegmentPayloadLength(maxSegmentPayloadLength);
   }
 
+  /**
+   * Segment the object and create child segment packets of the given Namespace.
+   * @param nameSpace The Namespace to append segment packets to. This
+   * ignores the Namespace from setNamespace().
+   * @param object The object to segment.
+   * @param useSignatureManifest (optional) If true, only use a
+   * DigestSha256Signature on the segment packets and create a signed
+   * _manifest packet as a child of the given Namespace. If false, sign each
+   * segment packet individually.
+   */
   void
-  setObject(Namespace& nameSpace, const ndn::Blob& object)
+  setObject
+    (Namespace& nameSpace, const ndn::Blob& object,
+     bool useSignatureManifest = false)
   {
-    impl_->setObject(nameSpace, object);
+    impl_->setObject(nameSpace, object, useSignatureManifest);
   }
 
   static const ndn::Name::Component&
@@ -164,7 +176,8 @@ private:
     setMaxSegmentPayloadLength(size_t maxSegmentPayloadLength);
 
     void
-    setObject(Namespace& nameSpace, const ndn::Blob& object);
+    setObject
+      (Namespace& nameSpace, const ndn::Blob& object, bool useSignatureManifest);
 
     void
     onNamespaceSet(Namespace* nameSpace)
