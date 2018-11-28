@@ -311,7 +311,7 @@ Namespace::Impl::objectNeeded()
 void
 Namespace::Impl::expressInterest(const Interest *interestTemplate)
 {
-  Face* face = getFace();
+  Face* face = getFace_();
   if (!face)
     throw runtime_error("A Face object has not been set for this or a parent");
 
@@ -336,7 +336,7 @@ Namespace::Impl::removeCallback(uint64_t callbackId)
 }
 
 Face*
-Namespace::Impl::getFace()
+Namespace::Impl::getFace_()
 {
   Namespace* nameSpace = &outerNamespace_;
   while (nameSpace) {

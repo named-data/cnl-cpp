@@ -598,6 +598,15 @@ public:
     impl_->deserialize_(blob, onObjectSet);
   }
 
+  /**
+   * Get the Face set by setFace on this or a parent Namespace node.
+   * @return The Face, or null if not set on this or any parent. This method
+   * name has an underscore because is normally only called from a Handler, not
+   * from the application.
+   */
+  ndn::Face*
+  getFace_() { return impl_->getFace_(); }
+
   Namespace&
   operator [] (const ndn::Name::Component& component)
   {
@@ -742,19 +751,15 @@ public:
     void
     removeCallback(uint64_t callbackId);
 
+    ndn::Face*
+    getFace_();
+
     void
     deserialize_
       (const ndn::Blob& blob, 
        const Handler::OnDeserialized& onObjectSet = Handler::OnDeserialized());
 
   private:
-    /**
-     * Get the Face set by setFace on this or a parent Namespace node.
-     * @return The Face, or null if not set on this or any parent.
-     */
-    ndn::Face*
-    getFace();
-
     /**
      * Get the maximum Interest lifetime that was set on this or a parent node.
      * @return The maximum Interest lifetime, or the default if not set on this
