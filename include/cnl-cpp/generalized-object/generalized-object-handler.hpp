@@ -93,7 +93,7 @@ public:
    * _manifest packet of the given Namespace.
    * @param nameSpace The Namespace to append segment packets to. This
    * ignores the Namespace from setNamespace().
-   * @param object The object to segment.
+   * @param object The object to publish as a Generalized Object.
    * @param contentType The content type for the content _meta packet.
    */
   void
