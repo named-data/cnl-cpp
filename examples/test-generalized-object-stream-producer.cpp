@@ -174,6 +174,8 @@ int main(int argc, char** argv)
         cout << "Register failed for prefix " << prefix->toUri() << endl;
       });
 
+    // Loop, producing a new object every previousPublishMs milliseconds (and
+    // also calling processEvents()).
     MillisecondsSince1970 previousPublishMs = 0;
     while (true) {
       MillisecondsSince1970 now = ndn_getNowMilliseconds();
