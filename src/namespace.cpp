@@ -279,6 +279,8 @@ Namespace::Impl::objectNeeded(bool mustBeFresh)
 {
   // Check if we already have the object.
   Interest interest(name_);
+  // TODO: Make the lifetime configurable.
+  interest.setInterestLifetimeMilliseconds(4000.0);
   interest.setMustBeFresh(mustBeFresh);
   // Debug: This requires a Data packet. Check for an object without one?
   Namespace* bestMatch = findBestMatchName
