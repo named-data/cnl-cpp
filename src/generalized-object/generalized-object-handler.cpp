@@ -21,6 +21,7 @@
 
 #include <memory.h>
 #include <stdexcept>
+#include <ndn-cpp/util/logging.hpp>
 #include <ndn-cpp-tools/usersync/content-meta-info.hpp>
 #include <cnl-cpp/generalized-object/generalized-object-handler.hpp>
 
@@ -28,6 +29,8 @@ using namespace std;
 using namespace ndn;
 using namespace ndntools;
 using namespace ndn::func_lib;
+
+INIT_LOGGER("cnl_cpp.GeneralizedObjectHandler");
 
 namespace cnl_cpp {
 
@@ -138,8 +141,15 @@ GeneralizedObjectHandler::Impl::onSegmentedObject
   (const ndn::ptr_lib::shared_ptr<Object>& object,
    const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo)
 {
-  if (onGeneralizedObject_)
-    onGeneralizedObject_(contentMetaInfo, object);
+  if (onGeneralizedObject_) {
+    try {
+      onGeneralizedObject_(contentMetaInfo, object);
+    } catch (const std::exception& ex) {
+      _LOG_ERROR("Error in onGeneralizedObject: " << ex.what());
+    } catch (...) {
+      _LOG_ERROR("Error in onGeneralizedObject.");
+    }
+  }
 }
 
 GeneralizedObjectHandler::Values* GeneralizedObjectHandler::values_ = 0;
