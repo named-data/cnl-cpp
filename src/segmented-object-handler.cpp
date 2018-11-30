@@ -139,6 +139,9 @@ SegmentedObjectHandler::Impl::setObject
     // Create the _manifest data packet.
     nameSpace[getNAME_COMPONENT_MANIFEST()].serializeObject
       (ptr_lib::make_shared<BlobObject>(Blob(manifestContent, false)));
+
+  // TODO: Do this in a canSerialize callback from Namespace.serializeObject?
+  nameSpace.setObject_(ptr_lib::make_shared<BlobObject>(object));
 }
 
 void
