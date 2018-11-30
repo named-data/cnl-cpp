@@ -39,7 +39,7 @@ SegmentStreamHandler::onNamespaceSet()
 }
 
 SegmentStreamHandler::Impl::Impl(const OnSegment& onSegment)
-: maxRetrievedSegmentNumber_(-1), didRequestFinalSegment_(false),
+: maxReportedSegmentNumber_(-1), didRequestFinalSegment_(false),
   finalSegmentNumber_(-1), interestPipelineSize_(8), initialInterestCount_(1),
   namespace_(0)
 {
@@ -118,13 +118,13 @@ SegmentStreamHandler::Impl::onStateChanged
 
   // Report as many segments as possible where the node already has content.
   while (true) {
-    int nextSegmentNumber = maxRetrievedSegmentNumber_ + 1;
+    int nextSegmentNumber = maxReportedSegmentNumber_ + 1;
     Namespace& nextSegment =
       (*namespace_)[Name::Component::fromSegment(nextSegmentNumber)];
     if (!nextSegment.getObject())
       break;
 
-    maxRetrievedSegmentNumber_ = nextSegmentNumber;
+    maxReportedSegmentNumber_ = nextSegmentNumber;
     fireOnSegment(&nextSegment);
 
     if (finalSegmentNumber_ >= 0 && nextSegmentNumber == finalSegmentNumber_) {
@@ -164,7 +164,7 @@ SegmentStreamHandler::Impl::requestNewSegments(int maxRequestedSegments)
   }
 
   // Now find unrequested segment numbers and request.
-  int segmentNumber = maxRetrievedSegmentNumber_;
+  int segmentNumber = maxReportedSegmentNumber_;
   while (nRequestedSegments < maxRequestedSegments) {
     ++segmentNumber;
     if (finalSegmentNumber_ >= 0 && segmentNumber > finalSegmentNumber_)

@@ -192,7 +192,7 @@ private:
     void
     fireOnSegment(Namespace* segmentNamespace);
 
-    int maxRetrievedSegmentNumber_;
+    int maxReportedSegmentNumber_;
     bool didRequestFinalSegment_;
     int finalSegmentNumber_;
     int interestPipelineSize_;
