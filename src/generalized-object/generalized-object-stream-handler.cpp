@@ -106,9 +106,10 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
   (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
    uint64_t callbackId)
 {
-  if (!(changedNamespace.getName().size() ==
+  if (!(state == NamespaceState_OBJECT_READY &&
+        changedNamespace.getName().size() ==
           latestNamespace_->getName().size() + 1 &&
-        state == NamespaceState_OBJECT_READY &&
+        latestNamespace_->getName().isPrefixOf(changedNamespace.getName()) &&
         changedNamespace.getName()[-1].isVersion()))
     // Not a versioned _latest, so ignore.
     return;

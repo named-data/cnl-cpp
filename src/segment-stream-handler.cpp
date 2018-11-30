@@ -104,9 +104,8 @@ SegmentStreamHandler::Impl::onStateChanged
   (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
    uint64_t callbackId)
 {
-  if (!(changedNamespace.getName().size() >=
-          namespace_->getName().size() + 1 &&
-        state == NamespaceState_OBJECT_READY &&
+  if (!(state == NamespaceState_OBJECT_READY &&
+        changedNamespace.getName().size() >= namespace_->getName().size() + 1 &&
         changedNamespace.getName()[
           namespace_->getName().size()].isSegment()))
     // Not a segment, ignore.
