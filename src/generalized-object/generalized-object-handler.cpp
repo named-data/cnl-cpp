@@ -53,14 +53,18 @@ GeneralizedObjectHandler::Impl::setObject
   contentMetaInfo.setTimestamp(ndn_getNowMilliseconds());
   contentMetaInfo.setHasSegments(hasSegments);
 
-  if (hasSegments)
-    segmentedObjectHandler_->setObject(nameSpace, object, true);
-  else
+  if (!hasSegments)
     // We don't need to segment. Put the object in the "other" field.
     contentMetaInfo.setOther(object);
 
   nameSpace[getNAME_COMPONENT_META()].serializeObject
     (ptr_lib::make_shared<BlobObject>(contentMetaInfo.wireEncode()));
+
+  if (hasSegments)
+    segmentedObjectHandler_->setObject(nameSpace, object, true);
+  else
+    // TODO: Do this in a canSerialize callback from Namespace.serializeObject?
+    nameSpace.setObject_(ptr_lib::make_shared<BlobObject>(object));
 }
 
 void
