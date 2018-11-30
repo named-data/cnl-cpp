@@ -582,9 +582,10 @@ Namespace::Impl::onInterest
     return;
 
   // Check if the Namespace node exists and has a matching Data packet.
+  Namespace& interestNamespace = getChild(interestName);
   if (hasChild(interestName)) {
     Namespace* bestMatch = findBestMatchName
-      (getChild(interestName), *interest, ndn_getNowMilliseconds());
+      (interestNamespace, *interest, ndn_getNowMilliseconds());
     if (bestMatch) {
       // findBestMatchName makes sure there is a data_ packet.
       face.putData(*bestMatch->impl_->data_);
@@ -594,8 +595,17 @@ Namespace::Impl::onInterest
 
   // No Data packet found, so save the pending Interest.
   root_->impl_->pendingIncomingInterestTable_->add(interest, face);
-  // Signal that a Data packet is needed.
-  getChild(interestName).objectNeeded();
+
+  // Ask all OnObjectNeeded callbacks if they can produce.
+  bool canProduce = false;
+  Namespace* nameSpace = &interestNamespace;
+  while (nameSpace) {
+    if (nameSpace->impl_->fireOnObjectNeeded(interestNamespace))
+      canProduce = true;
+    nameSpace = nameSpace->impl_->parent_;
+  }
+  if (canProduce)
+    interestNamespace.impl_->setState(NamespaceState_PRODUCING_OBJECT);
 }
 
 Namespace*
