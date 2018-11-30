@@ -187,8 +187,7 @@ Namespace::Impl::serializeObject(const ptr_lib::shared_ptr<Object>& object)
   // This calls satisfyInterests.
   setData(data);
 
-  object_ = object;
-  setState(NamespaceState_OBJECT_READY);
+  setObject_(object);
 }
 
 bool

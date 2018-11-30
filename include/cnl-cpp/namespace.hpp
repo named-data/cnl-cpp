@@ -595,6 +595,12 @@ public:
   ndn::KeyChain*
   getKeyChain_() { return impl_->getKeyChain_(); }
 
+  void
+  setObject_(const ndn::ptr_lib::shared_ptr<Object>& object)
+  {
+    impl_->setObject_(object);
+  }
+
   Namespace&
   operator [] (const ndn::Name::Component& component)
   {
@@ -738,6 +744,13 @@ public:
     deserialize_
       (const ndn::Blob& blob, 
        const Handler::OnDeserialized& onObjectSet = Handler::OnDeserialized());
+
+    void
+    setObject_(const ndn::ptr_lib::shared_ptr<Object>& object)
+    {
+      object_ = object;
+      setState(NamespaceState_OBJECT_READY);
+    }
 
   private:
     /**
