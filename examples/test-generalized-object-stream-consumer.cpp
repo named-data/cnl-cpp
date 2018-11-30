@@ -50,7 +50,7 @@ int main(int argc, char** argv)
         ", content-type " << contentMetaInfo->getContentType() << ": " <<
         ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
     };
-    int pipelineSize = 20;
+    int pipelineSize = 10;
     stream.setHandler
       (ptr_lib::make_shared<GeneralizedObjectStreamHandler>
        (pipelineSize, onNewObject)).objectNeeded();
