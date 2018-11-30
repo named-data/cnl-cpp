@@ -28,8 +28,8 @@ namespace cnl_cpp {
 
 /**
  * GeneralizedObjectStreamHandler extends Namespace::Handler and attaches to a
- * Namespace node to fetch the _latest packet and use the name in it to fetch
- * the generalized object using a GeneralizedObjectHandler.
+ * Namespace node to fetch the _latest packet and use the name in it to start
+ * fetching the stream of generalized object using a GeneralizedObjectHandler.
  */
 class GeneralizedObjectStreamHandler : public Namespace::Handler {
 public:
@@ -42,7 +42,8 @@ public:
    * Create a GeneralizedObjectStreamHandler with the optional
    * onSequencedGeneralizedObject callback.
    * @param pipelineSize (optional) The pipeline size (number of objects, not
-   * interests).
+   * interests). The pipelineSize times the expected period between objects
+   * should be less than the maximum interest lifetime.
    * @param onSequencedGeneralizedObject (optional) When the ContentMetaInfo is
    * received for a new sequence number and the hasSegments is false, this calls
    * onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, object) where
@@ -66,6 +67,15 @@ public:
           (pipelineSize, onSequencedGeneralizedObject))
   {
   }
+
+  /**
+   * Get the getGeneralizedObjectHandlerwhich is used to segment an object. You
+   * can use this to set parameters such as
+   * getGeneralizedObjectHandler().getSegmentedObjectHandler().setMaxSegmentPayloadLength().
+   * @return The GeneralizedObjectHandler.
+   */
+  GeneralizedObjectHandler&
+  getGeneralizedObjectHandler() { return impl_->getGeneralizedObjectHandler(); }
 
   /**
    * Prepare the generalized object as a child of the given sequence number
@@ -143,6 +153,9 @@ private:
     Impl(int pipelineSize,
          const OnSequencedGeneralizedObject& onSequencedGeneralizedObject);
 
+    GeneralizedObjectHandler&
+    getGeneralizedObjectHandler() { return generalizedObjectHandler_; }
+
     void
     setObject
       (int sequenceNumber, const ndn::Blob& object,
@@ -167,25 +180,17 @@ private:
     /**
      * This is called for object needed at the Handler's namespace. If
      * neededNamespace is the Handler's Namespace (called by the appliction),
-     * then start fetching the _latest packet. If neededNamespace is for the
-     * _latest packet (from an incoming Interest), produce the _latest packet
-     * for the current sequence number.
+     * then fetch the _latest packet. If neededNamespace is for the _latest 
+     * packet (from an incoming Interest), produce the _latest packet for the
+     * current sequence number.
      */
     bool
     onObjectNeeded
       (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId);
 
     /**
-     * This is called repeatedly to fetch the _latest packet and call
-     * onStateChanged with OBJECT_READY. If the library already has a fresh
-     * _latest packet, it calls onStateChanged immediately.
-     */
-    void
-    latestNeeded() { latestNamespace_->objectNeeded(true); }
-
-    /**
      * This is called when a packet arrives. Parse the _latest packet and start
-     * fetching the GeneralizedObject under the sequence name component.
+     * fetching the stream of GeneralizedObject by sequence number.
      */
     void
     onStateChanged
@@ -203,6 +208,12 @@ private:
        const ndn::ptr_lib::shared_ptr<Object>& object,
        int sequenceNumber);
 
+    /**
+     * Request new child sequence numbers, up to the pipelineSize_.
+     */
+    void
+    requestNewSequenceNumbers();
+
     OnSequencedGeneralizedObject onSequencedGeneralizedObject_;
     Namespace* namespace_;
     Namespace* latestNamespace_;
@@ -210,6 +221,7 @@ private:
     int pipelineSize_;
     ndn::Milliseconds latestPacketFreshnessPeriod_;
     GeneralizedObjectHandler generalizedObjectHandler_;
+    int maxReportedSequenceNumber_;
   };
 
   /**

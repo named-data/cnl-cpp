@@ -19,6 +19,7 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+#include <ndn-cpp/util/logging.hpp>
 #include <ndn-cpp/delegation-set.hpp>
 #include <cnl-cpp/generalized-object/generalized-object-stream-handler.hpp>
 
@@ -26,6 +27,8 @@ using namespace std;
 using namespace ndn;
 using namespace ndntools;
 using namespace ndn::func_lib;
+
+INIT_LOGGER("cnl_cpp.GeneralizedObjectStreamHandler");
 
 namespace cnl_cpp {
 
@@ -35,8 +38,10 @@ GeneralizedObjectStreamHandler::Impl::Impl
 : pipelineSize_(pipelineSize),
   onSequencedGeneralizedObject_(onSequencedGeneralizedObject), namespace_(0),
   latestNamespace_(0), producedSequenceNumber_(-1),
-  latestPacketFreshnessPeriod_(1000.0)
+  latestPacketFreshnessPeriod_(1000.0), maxReportedSequenceNumber_(-1)
 {
+  if (pipelineSize_ < 1)
+    pipelineSize_ = 1;
 }
 
 void
@@ -74,8 +79,8 @@ GeneralizedObjectStreamHandler::Impl::onObjectNeeded
   (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId)
 {
   if (&neededNamespace == namespace_) {
-    // Assume this is called by a consumer. Fetch the first _latest packet.
-    latestNeeded();
+    // Assume this is called by a consumer. Fetch the _latest packet.
+    latestNamespace_->objectNeeded(true);
     return true;
   }
 
@@ -115,38 +120,26 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
     return;
 
   // Decode the _latest packet to get the target to fetch.
+  // TODO: Should this already have been done by deserialize()?)
   DelegationSet delegations;
   delegations.wireDecode
     (ptr_lib::dynamic_pointer_cast<BlobObject>(changedNamespace.getObject())->getBlob());
   if (delegations.size() <= 0)
     return;
   const Name& targetName = delegations.get(0).getName();
-  if (!(namespace_->getName().isPrefixOf(targetName)) &&
-          targetName.size() == namespace_->getName().size() + 1)
-    // TODO: Report an error that the target name is outside of the handler's prefix.
+  if (!(namespace_->getName().isPrefixOf(targetName) &&
+        targetName.size() == namespace_->getName().size() + 1 &&
+        targetName[-1].isSequenceNumber()))
+    // TODO: Report an error for invalid target name?
     return;
   Namespace& targetNamespace = (*namespace_)[targetName];
 
+  // We may already have the target if this was triggered by the producer.
   if (!targetNamespace.getObject()) {
-    // Fetch the target.
-    int targetSequenceNumber = (int)targetName[-1].toSequenceNumber();
-    // Debug: Do we have to attach a new handler for each sequence number?
-    ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
-      ptr_lib::make_shared<GeneralizedObjectHandler>
-        (bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
-              shared_from_this(), _1, _2, targetSequenceNumber));
-    targetNamespace.setHandler(generalizedObjectHandler).objectNeeded();
+    int sequenceNumber = targetName[-1].toSequenceNumber();
+    maxReportedSequenceNumber_ = sequenceNumber - 1;
+    requestNewSequenceNumbers();
   }
-  
-  // Schedule to fetch the next _latest packet.
-  int freshnessPeriod =
-    changedNamespace.getData()->getMetaInfo().getFreshnessPeriod();
-  if (freshnessPeriod < 0)
-    // No freshness period. We don't expect this.
-    return;
-  latestNamespace_->getFace_()->callLater
-    (freshnessPeriod / 2,
-     bind(&GeneralizedObjectStreamHandler::Impl::latestNeeded, shared_from_this()));
 }
 
 void
@@ -156,8 +149,68 @@ GeneralizedObjectStreamHandler::Impl::onGeneralizedObject
    int sequenceNumber)
 {
   if (onSequencedGeneralizedObject_) {
-    // TODO: Catch and log errors.
-    onSequencedGeneralizedObject_(sequenceNumber, contentMetaInfo, object);
+    try {
+      onSequencedGeneralizedObject_(sequenceNumber, contentMetaInfo, object);
+    } catch (const std::exception& ex) {
+      _LOG_ERROR("Error in onSequencedGeneralizedObject: " << ex.what());
+    } catch (...) {
+      _LOG_ERROR("Error in onSequencedGeneralizedObject.");
+    }
+  }
+
+  if (sequenceNumber > maxReportedSequenceNumber_)
+    maxReportedSequenceNumber_ = sequenceNumber;
+  requestNewSequenceNumbers();
+}
+
+void
+GeneralizedObjectStreamHandler::Impl::requestNewSequenceNumbers()
+{
+  ptr_lib::shared_ptr<vector<Name::Component>> childComponents =
+    namespace_->getChildComponents();
+  // First, count how many are already requested and not received.
+  int nRequestedSequenceNumbers = 0;
+  // Debug: Track the max requested (and don't search all children).
+  for (vector<Name::Component>::iterator component = childComponents->begin();
+       component != childComponents->end(); ++component) {
+    if (!component->isSequenceNumber())
+      // The namespace contains a child other than a sequence number. Ignore.
+      continue;
+
+    // TODO: Should the child sequence be set to INTEREST_EXPRESSED along with _meta?
+    Namespace& metaChild =
+      (*namespace_)[*component]
+                   [GeneralizedObjectHandler::getNAME_COMPONENT_META()];
+    if (!metaChild.getData() &&
+        metaChild.getState() >= NamespaceState_INTEREST_EXPRESSED) {
+      ++nRequestedSequenceNumbers;
+      if (nRequestedSequenceNumbers >= pipelineSize_)
+        // Already maxed out on requests.
+        break;
+    }
+  }
+
+  // Now find unrequested sequence numbers and request.
+  int sequenceNumber = maxReportedSequenceNumber_;
+  while (nRequestedSequenceNumbers < pipelineSize_) {
+    ++sequenceNumber;
+    Namespace& sequenceNamespace =
+      (*namespace_)[Name::Component::fromSequenceNumber(sequenceNumber)];
+    Namespace& sequenceMeta =
+      sequenceNamespace[GeneralizedObjectHandler::getNAME_COMPONENT_META()];
+    if (sequenceMeta.getData() ||
+        sequenceMeta.getState() >= NamespaceState_INTEREST_EXPRESSED)
+      // Already got the data packet or already requested.
+      continue;
+
+    ++nRequestedSequenceNumbers;
+    // Debug: Do we have to attach a new handler for each sequence number?
+    ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
+      ptr_lib::make_shared<GeneralizedObjectHandler>
+        (bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
+              shared_from_this(), _1, _2, sequenceNumber));
+    sequenceNamespace.setHandler(generalizedObjectHandler);
+    sequenceMeta.objectNeeded();
   }
 }
 
