@@ -192,15 +192,14 @@ private:
     onSegment(Namespace* segmentNamespace);
 
     void
-    fireOnSegmentedObject(const ndn::ptr_lib::shared_ptr<Object>& object);
+    fireOnSegmentedObjectAndRemove(const ndn::ptr_lib::shared_ptr<Object>& object);
 
-    bool finished_;
     std::vector<ndn::Blob> segments_;
     size_t totalSize_;
     // The key is the callback ID. The value is the OnSegmentedObject function.
     std::map<uint64_t, OnDeserialized> onSegmentedObjectCallbacks_;
-    Namespace* namespace_;
     size_t maxSegmentPayloadLength_;
+    Namespace* namespace_;
   };
 
   /**

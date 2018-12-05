@@ -33,7 +33,7 @@ INIT_LOGGER("cnl_cpp.SegmentedObjectHandler");
 namespace cnl_cpp {
 
 SegmentedObjectHandler::Impl::Impl(const OnDeserialized& onSegmentedObject)
-: finished_(false), totalSize_(0), namespace_(0), maxSegmentPayloadLength_(8192)
+: totalSize_(0), maxSegmentPayloadLength_(8192), namespace_(0)
 {
   if (onSegmentedObject)
     addOnSegmentedObject(onSegmentedObject);
@@ -147,10 +147,6 @@ SegmentedObjectHandler::Impl::setObject
 void
 SegmentedObjectHandler::Impl::onSegment(Namespace* segmentNamespace)
 {
-  if (finished_)
-    // We already finished and called onContent. (We don't expect this.)
-    return;
-
   if (segmentNamespace) {
     segments_.push_back(segmentNamespace->getBlobObject());
     totalSize_ += segmentNamespace->getBlobObject().size();
@@ -168,19 +164,20 @@ SegmentedObjectHandler::Impl::onSegment(Namespace* segmentNamespace)
         segments_[i] = Blob();
       }
 
-      // Free memory.
+      // Free resources that won't be used anymore.
+      // The OnSegment callback was already removed by the SegmentStreamHandler.
       segments_.clear();
-      finished_ = true;
 
       // Deserialize and fire the onSegmentedObject callbacks when done.
       namespace_->deserialize_
         (Blob(content, false),
-         bind(&SegmentedObjectHandler::Impl::fireOnSegmentedObject, shared_from_this(), _1));
+         bind(&SegmentedObjectHandler::Impl::fireOnSegmentedObjectAndRemove,
+              shared_from_this(), _1));
   }
 }
 
 void
-SegmentedObjectHandler::Impl::fireOnSegmentedObject
+SegmentedObjectHandler::Impl::fireOnSegmentedObjectAndRemove
   (const ptr_lib::shared_ptr<Object>& object)
 {
   // Copy the keys before iterating since callbacks can change the list.
@@ -206,6 +203,9 @@ SegmentedObjectHandler::Impl::fireOnSegmentedObject
       }
     }
   }
+
+  // We only fire the callbacks once, so free the resources.
+  onSegmentedObjectCallbacks_.clear();
 }
 
 SegmentedObjectHandler::Values* SegmentedObjectHandler::values_ = 0;
