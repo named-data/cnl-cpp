@@ -350,6 +350,19 @@ public:
   getData() { return impl_->getData(); }
 
   /**
+   * Recursively append to the Data packets for this and children nodes to the
+   * given list.
+   * @param dataList Append the Data packets to this list. This does not first
+   * clear the list. You should not modify the returned Data packets. If you
+   * need to modify one, then make a copy.
+   */
+  void
+  getAllData(std::vector<ndn::ptr_lib::shared_ptr<ndn::Data>>& dataList)
+  {
+    impl_->getAllData(dataList);
+  }
+
+  /**
    * Get the deserialized object attached to this Namespace object. Note that
    * getObject() may be different than the content in the attached Data packet
    * (for example if the content is decrypted). In the default behavior, the
@@ -688,6 +701,9 @@ public:
 
     const ndn::ptr_lib::shared_ptr<ndn::Data>&
     getData() { return data_; }
+
+    void
+    getAllData(std::vector<ndn::ptr_lib::shared_ptr<ndn::Data>>& dataList);
 
     const ndn::ptr_lib::shared_ptr<Object>&
     getObject() { return object_; }

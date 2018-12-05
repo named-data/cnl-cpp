@@ -215,6 +215,20 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
   return true;
 }
 
+void
+Namespace::Impl::getAllData
+  (std::vector<ndn::ptr_lib::shared_ptr<ndn::Data>>& dataList)
+{
+  if (data_)
+    dataList.push_back(data_);
+
+  if (children_.size() > 0) {
+    for (map<Name::Component, ptr_lib::shared_ptr<Namespace>>::iterator i = children_.begin();
+         i != children_.end(); ++i)
+      i->second->impl_->getAllData(dataList);
+  }
+}
+
 uint64_t
 Namespace::Impl::addOnStateChanged(const OnStateChanged& onStateChanged)
 {
