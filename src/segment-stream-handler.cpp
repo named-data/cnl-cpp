@@ -41,7 +41,7 @@ SegmentStreamHandler::onNamespaceSet()
 SegmentStreamHandler::Impl::Impl(const OnSegment& onSegment)
 : maxReportedSegmentNumber_(-1), didRequestFinalSegment_(false),
   finalSegmentNumber_(-1), interestPipelineSize_(8), initialInterestCount_(1),
-  namespace_(0)
+  onObjectNeededId_(0), onStateChangedId_(0), namespace_(0)
 {
   if (onSegment)
     addOnSegment(onSegment);
@@ -82,9 +82,9 @@ SegmentStreamHandler::Impl::onNamespaceSet(Namespace* nameSpace)
 {
   namespace_ = nameSpace;
 
-  namespace_->addOnObjectNeeded
+  onObjectNeededId_ = namespace_->addOnObjectNeeded
     (bind(&SegmentStreamHandler::Impl::onObjectNeeded, shared_from_this(), _1, _2, _3));
-  namespace_->addOnStateChanged
+  onStateChangedId_ = namespace_->addOnStateChanged
     (bind(&SegmentStreamHandler::Impl::onStateChanged, shared_from_this(), _1, _2, _3, _4));
 }
 
@@ -130,6 +130,12 @@ SegmentStreamHandler::Impl::onStateChanged
     if (finalSegmentNumber_ >= 0 && nextSegmentNumber == finalSegmentNumber_) {
       // Finished.
       fireOnSegment(0);
+
+      // Free resources that won't be used anymore.
+      onSegmentCallbacks_.clear();
+      namespace_->removeCallback(onObjectNeededId_);
+      namespace_->removeCallback(onStateChangedId_);
+
       return;
     }
   }

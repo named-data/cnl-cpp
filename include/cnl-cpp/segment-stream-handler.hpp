@@ -199,6 +199,8 @@ private:
     int initialInterestCount_;
     // The key is the callback ID. The value is the OnSegment function.
     std::map<uint64_t, OnSegment> onSegmentCallbacks_;
+    uint64_t onObjectNeededId_;
+    uint64_t onStateChangedId_;
     Namespace* namespace_;
   };
 
