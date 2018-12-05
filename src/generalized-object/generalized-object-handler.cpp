@@ -123,7 +123,10 @@ GeneralizedObjectHandler::Impl::canDeserialize
     // Explicitly request segment 0 to avoid fetching _meta, etc.
     (*namespace_)[Name::Component::fromSegment(0)].objectNeeded();
 
-    // TODO: Fetch the _manifest packet. How to override per-packet verification?
+    // Fetch the _manifest packet.
+    // getAllData(dataList): Verification should be handled by SegmentedObjectHandler.
+    // TODO: How does SegmentedObjectHandler consumer know we're using a _manifest?
+    (*namespace_)[SegmentedObjectHandler::getNAME_COMPONENT_MANIFEST()].objectNeeded();
   }
   else
     // No segments, so the object is the ContentMetaInfo "other" Blob.
