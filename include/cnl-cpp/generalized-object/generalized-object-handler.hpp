@@ -160,11 +160,12 @@ private:
 
     /**
      * This is called when the SegmentedObjectHandler finishes.
-     * @param object The deserialized object from the SegmentedObjectHandler.
+     * @param objectNamespace The Namespace with the deserialized object from
+     * the SegmentedObjectHandler.
      * @param contentMetaInfo The ContentMetaInfoObject from canDeserialize.
      */
     void onSegmentedObject
-      (const ndn::ptr_lib::shared_ptr<Object>& object,
+      (Namespace& objectNamespace,
        const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo);
 
     ndn::ptr_lib::shared_ptr<SegmentedObjectHandler> segmentedObjectHandler_;

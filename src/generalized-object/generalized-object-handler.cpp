@@ -141,12 +141,12 @@ GeneralizedObjectHandler::Impl::canDeserialize
 
 void
 GeneralizedObjectHandler::Impl::onSegmentedObject
-  (const ndn::ptr_lib::shared_ptr<Object>& object,
+  (Namespace& objectNamespace,
    const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo)
 {
   if (onGeneralizedObject_) {
     try {
-      onGeneralizedObject_(contentMetaInfo, object);
+      onGeneralizedObject_(contentMetaInfo, objectNamespace.getObject());
     } catch (const std::exception& ex) {
       _LOG_ERROR("Error in onGeneralizedObject: " << ex.what());
     } catch (...) {
