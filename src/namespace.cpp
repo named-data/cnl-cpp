@@ -279,6 +279,12 @@ Namespace::Impl::setFace
 Namespace&
 Namespace::Impl::setHandler(const ptr_lib::shared_ptr<Handler>& handler)
 {
+  if (!handler) {
+    // Clear the Handler.
+    handler_.reset();
+    return outerNamespace_;
+  }
+
   if (handler_)
     // TODO: Should we try to chain handlers?
     throw runtime_error("This Namespace node already has a handler");
