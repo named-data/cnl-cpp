@@ -45,10 +45,10 @@ int main(int argc, char** argv)
     // This is called to print the content after it is re-assembled from segments.
     auto onObject = [&]
       (const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-       const ndn::ptr_lib::shared_ptr<Object>& object) {
+       Namespace& objectNamespace) {
       cout << "Got generalized object, content-type " <<
         contentMetaInfo->getContentType() << ": " <<
-        ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
+        objectNamespace.getBlobObject().toRawStr() << endl;
       enabled = false;
     };
     objectPrefix.setHandler
