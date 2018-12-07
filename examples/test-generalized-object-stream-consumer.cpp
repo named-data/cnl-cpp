@@ -45,10 +45,10 @@ int main(int argc, char** argv)
     auto onNewObject = [&]
       (int sequenceNumber,
        const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-       const ndn::ptr_lib::shared_ptr<Object>& object) {
+       Namespace& objectNamespace) {
       cout << "Got generalized object, sequenceNumber " << sequenceNumber <<
         ", content-type " << contentMetaInfo->getContentType() << ": " <<
-        ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
+        objectNamespace.getBlobObject().toRawStr() << endl;
     };
     int pipelineSize = 10;
     stream.setHandler
