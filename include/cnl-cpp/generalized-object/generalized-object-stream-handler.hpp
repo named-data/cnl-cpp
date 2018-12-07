@@ -36,7 +36,7 @@ public:
   typedef ndn::func_lib::function<void
     (int sequenceNumber,
      const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-     const ndn::ptr_lib::shared_ptr<Object>& object)> OnSequencedGeneralizedObject;
+     Namespace& objectNamespace)> OnSequencedGeneralizedObject;
 
   /**
    * Create a GeneralizedObjectStreamHandler with the optional
@@ -46,18 +46,20 @@ public:
    * should be less than the maximum interest lifetime.
    * @param onSequencedGeneralizedObject (optional) When the ContentMetaInfo is
    * received for a new sequence number and the hasSegments is false, this calls
-   * onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, object) where
-   * sequenceNumber is the new sequence number, contentMetaInfo is the
-   * ContentMetaInfo and object is the "other" info as a BlobObject or possibly
-   * deserialized into another type. If the hasSegments flag is true, when the
-   * segments are received and assembled into a single block of memory, this
-   * calls onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, object)
+   * onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, objectNamespace)
    * where sequenceNumber is the new sequence number, contentMetaInfo is the
-   * ContentMetaInfo and object is the object that was assembled from the
-   * segment contents as a BlobObject or possibly deserialized to another type.
-   * If you don't supply an onGeneralizedObject callback here, you can call
-   * addOnStateChanged on the Namespace object to which this is attached and
-   * listen for the OBJECT_READY state.
+   * ContentMetaInfo and objectNamespace.getObject() is the "other" info as a
+   * BlobObject or possibly deserialized into another type. If the hasSegments
+   * flag is true, when the segments are received and assembled into a single
+   * block of memory, this calls
+   * onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, objectNamespace)
+   * where sequenceNumber is the new sequence number, contentMetaInfo is the
+   * ContentMetaInfo and objectNamespace.getObject() is the object that was
+   * assembled from the segment contents as a BlobObject or possibly
+   * deserialized to another type. If you don't supply an
+   * onSequencedGeneralizedObject callback here, you can call addOnStateChanged
+   * on the Namespace object to which this is attached and listen for the
+   * OBJECT_READY state.
    */
   GeneralizedObjectStreamHandler
     (int pipelineSize = 8,

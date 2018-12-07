@@ -150,7 +150,7 @@ GeneralizedObjectStreamHandler::Impl::onGeneralizedObject
   if (onSequencedGeneralizedObject_) {
     try {
       onSequencedGeneralizedObject_
-        (sequenceNumber, contentMetaInfo, objectNamespace.getObject());
+        (sequenceNumber, contentMetaInfo, objectNamespace);
     } catch (const std::exception& ex) {
       _LOG_ERROR("Error in onSequencedGeneralizedObject: " << ex.what());
     } catch (...) {
