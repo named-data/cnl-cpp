@@ -32,6 +32,8 @@ namespace cnl_cpp {
  */
 class SegmentedObjectHandler : public SegmentStreamHandler {
 public:
+  typedef ndn::func_lib::function<void(Namespace& objectNamespace)> OnSegmentedObject;
+
   /**
    * Create a SegmentedObjectHandler with the optional onSegmentedObject callback.
    * @param onSegmentedObject (optional) If supplied, this calls
@@ -39,7 +41,7 @@ public:
    * addOnSegmentedObject directly.
    */
   SegmentedObjectHandler
-    (const OnDeserialized& onSegmentedObject = OnDeserialized())
+    (const OnSegmentedObject& onSegmentedObject = OnSegmentedObject())
   : impl_(ndn::ptr_lib::make_shared<Impl>(onSegmentedObject))
   {
     impl_->initialize(this);
@@ -66,16 +68,16 @@ public:
    * Add an OnSegmentedObject callback. When the child segments are assembled
    * into a single block of memory, this calls onSegmentedObject as described
    * below.
-   * @param onSegmentedObject This calls onSegmentedObject(object) where
-   * object is the object that was assembled from the segment contents and
-   * deserialized.
+   * @param onSegmentedObject This calls onSegmentedObject(objectNamespace) 
+   * where objectNamespace.getObject() is the object that was assembled from the
+   * segment contents and deserialized.
    * NOTE: The library will log any exceptions thrown by this callback, but for
    * better error handling the callback should catch and properly handle any
    * exceptions.
    * @return The callback ID which you can use in removeCallback().
    */
   uint64_t
-  addOnSegmentedObject(const OnDeserialized& onSegmentedObject)
+  addOnSegmentedObject(const OnSegmentedObject& onSegmentedObject)
   {
     return impl_->addOnSegmentedObject(onSegmentedObject);
   }
@@ -152,7 +154,7 @@ private:
      * initialize().
      * @param onSegmentedObject See the SegmentedObjectHandler constructor.
      */
-    Impl(const OnDeserialized& onSegmentedObject);
+    Impl(const OnSegmentedObject& onSegmentedObject);
 
     /**
      * Complete the work of the constructor. This is needed because we can't
@@ -164,7 +166,7 @@ private:
     initialize(SegmentedObjectHandler* outerHandler);
 
     uint64_t
-    addOnSegmentedObject(const OnDeserialized& onSegmentedObject);
+    addOnSegmentedObject(const OnSegmentedObject& onSegmentedObject);
 
     void
     removeCallback(uint64_t callbackId);
@@ -192,12 +194,12 @@ private:
     onSegment(Namespace* segmentNamespace);
 
     void
-    fireOnSegmentedObjectAndRemove(const ndn::ptr_lib::shared_ptr<Object>& object);
+    fireOnSegmentedObject(Namespace& objectNamespace);
 
     std::vector<ndn::Blob> segments_;
     size_t totalSize_;
     // The key is the callback ID. The value is the OnSegmentedObject function.
-    std::map<uint64_t, OnDeserialized> onSegmentedObjectCallbacks_;
+    std::map<uint64_t, OnSegmentedObject> onSegmentedObjectCallbacks_;
     size_t maxSegmentPayloadLength_;
     Namespace* namespace_;
   };

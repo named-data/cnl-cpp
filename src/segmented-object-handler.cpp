@@ -32,7 +32,7 @@ INIT_LOGGER("cnl_cpp.SegmentedObjectHandler");
 
 namespace cnl_cpp {
 
-SegmentedObjectHandler::Impl::Impl(const OnDeserialized& onSegmentedObject)
+SegmentedObjectHandler::Impl::Impl(const OnSegmentedObject& onSegmentedObject)
 : totalSize_(0), maxSegmentPayloadLength_(8192), namespace_(0)
 {
   if (onSegmentedObject)
@@ -48,7 +48,7 @@ SegmentedObjectHandler::Impl::initialize(SegmentedObjectHandler* outerHandler)
 
 uint64_t
 SegmentedObjectHandler::Impl::addOnSegmentedObject
-  (const OnDeserialized& onSegmentedObject)
+  (const OnSegmentedObject& onSegmentedObject)
 {
   uint64_t callbackId = Namespace::getNextCallbackId();
   onSegmentedObjectCallbacks_[callbackId] = onSegmentedObject;
@@ -169,32 +169,33 @@ SegmentedObjectHandler::Impl::onSegment(Namespace* segmentNamespace)
       segments_.clear();
 
       // Deserialize and fire the onSegmentedObject callbacks when done.
-      namespace_->deserialize_
-        (Blob(content, false),
-         bind(&SegmentedObjectHandler::Impl::fireOnSegmentedObjectAndRemove,
-              shared_from_this(), _1));
+      auto onObjectSet = [&](Namespace& objectNamespace) {
+        fireOnSegmentedObject(*namespace_);
+        // We only fire the callbacks once, so free the resources.
+        onSegmentedObjectCallbacks_.clear();
+      };
+      namespace_->deserialize_(Blob(content, false), onObjectSet);
   }
 }
 
 void
-SegmentedObjectHandler::Impl::fireOnSegmentedObjectAndRemove
-  (const ptr_lib::shared_ptr<Object>& object)
+SegmentedObjectHandler::Impl::fireOnSegmentedObject(Namespace& objectNamespace)
 {
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
   keys.reserve(onSegmentedObjectCallbacks_.size());
-  for (map<uint64_t, OnDeserialized>::iterator i =
+  for (map<uint64_t, OnSegmentedObject>::iterator i =
          onSegmentedObjectCallbacks_.begin();
        i != onSegmentedObjectCallbacks_.end(); ++i)
     keys.push_back(i->first);
 
   for (size_t i = 0; i < keys.size(); ++i) {
     // A callback on a previous pass may have removed this callback, so check.
-    map<uint64_t, OnDeserialized>::iterator entry =
+    map<uint64_t, OnSegmentedObject>::iterator entry =
       onSegmentedObjectCallbacks_.find(keys[i]);
     if (entry != onSegmentedObjectCallbacks_.end()) {
       try {
-        entry->second(object);
+        entry->second(objectNamespace);
       } catch (const std::exception& ex) {
         _LOG_ERROR("SegmentStreamHandler::fireOnSegment: Error in onSegmentedObject: " <<
                    ex.what());
@@ -203,9 +204,6 @@ SegmentedObjectHandler::Impl::fireOnSegmentedObjectAndRemove
       }
     }
   }
-
-  // We only fire the callbacks once, so free the resources.
-  onSegmentedObjectCallbacks_.clear();
 }
 
 SegmentedObjectHandler::Values* SegmentedObjectHandler::values_ = 0;
