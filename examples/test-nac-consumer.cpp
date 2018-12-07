@@ -166,9 +166,9 @@ int main(int argc, char** argv)
     bool enabled = true;
     // This is called to print the content after it is decrypted and re-assembled
     // from segments.
-    auto onObject = [&](const ndn::ptr_lib::shared_ptr<Object>& object) {
+    auto onObject = [&](Namespace& objectNamespace) {
       cout << "Got segmented content " <<
-        ptr_lib::dynamic_pointer_cast<BlobObject>(object)->toRawStr() << endl;
+        objectNamespace.getBlobObject().toRawStr() << endl;
       enabled = false;
     };
     contentNamespace.setHandler

@@ -41,10 +41,9 @@ int main(int argc, char** argv)
 
     bool enabled = true;
     // This is called to print the content after it is re-assembled from segments.
-    auto onObject = [&]
-      (const ndn::ptr_lib::shared_ptr<Object>& object) {
+    auto onObject = [&](Namespace& objectNamespace) {
       cout << "Got segmented content size " <<
-        ptr_lib::dynamic_pointer_cast<BlobObject>(object)->size() << endl;
+        objectNamespace.getBlobObject().size() << endl;
       enabled = false;
     };
     page.setHandler
