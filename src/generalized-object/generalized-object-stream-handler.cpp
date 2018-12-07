@@ -145,12 +145,12 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
 void
 GeneralizedObjectStreamHandler::Impl::onGeneralizedObject
   (const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-   const ndn::ptr_lib::shared_ptr<Object>& object,
-   int sequenceNumber)
+   Namespace& objectNamespace, int sequenceNumber)
 {
   if (onSequencedGeneralizedObject_) {
     try {
-      onSequencedGeneralizedObject_(sequenceNumber, contentMetaInfo, object);
+      onSequencedGeneralizedObject_
+        (sequenceNumber, contentMetaInfo, objectNamespace.getObject());
     } catch (const std::exception& ex) {
       _LOG_ERROR("Error in onSequencedGeneralizedObject: " << ex.what());
     } catch (...) {

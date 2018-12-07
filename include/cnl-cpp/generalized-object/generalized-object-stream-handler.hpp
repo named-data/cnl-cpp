@@ -205,8 +205,7 @@ private:
     void
     onGeneralizedObject
       (const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-       const ndn::ptr_lib::shared_ptr<Object>& object,
-       int sequenceNumber);
+       Namespace& objectNamespace, int sequenceNumber);
 
     /**
      * Request new child sequence numbers, up to the pipelineSize_.
