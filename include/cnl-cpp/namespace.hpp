@@ -98,6 +98,8 @@ public:
     typedef ndn::func_lib::function<void
       (const ndn::ptr_lib::shared_ptr<Object>& object)> OnDeserialized;
 
+    typedef ndn::func_lib::function<void(Namespace& objectNamespace)> OnObjectSet;
+
     Handler()
     : namespace_(0)
     {}
@@ -580,12 +582,12 @@ public:
    * Handler, not from the application.
    * @param blob The Blob to deserialize.
    * @param onObjectSet (optional) If supplied, after setting the object, this
-   * calls onObjectSet(object).
+   * calls onObjectSet(objectNamespace).
    */
   void
   deserialize_
     (const ndn::Blob& blob,
-     const Handler::OnDeserialized& onObjectSet = Handler::OnDeserialized())
+     const Handler::OnObjectSet& onObjectSet = Handler::OnObjectSet())
   {
     impl_->deserialize_(blob, onObjectSet);
   }
@@ -759,7 +761,7 @@ public:
     void
     deserialize_
       (const ndn::Blob& blob, 
-       const Handler::OnDeserialized& onObjectSet = Handler::OnDeserialized());
+       const Handler::OnObjectSet& onObjectSet = Handler::OnObjectSet());
 
     void
     setObject_(const ndn::ptr_lib::shared_ptr<Object>& object)
@@ -839,12 +841,12 @@ public:
      * handler.
      * @param object The deserialized object.
      * @param onObjectSet If supplied, after setting the object, this calls
-     * onObjectSet(object).
+     * onObjectSet(objectNamespace).
      */
     void
     defaultOnDeserialized
       (const ndn::ptr_lib::shared_ptr<Object>& object,
-       const Handler::OnDeserialized& onObjectSet);
+       const Handler::OnObjectSet& onObjectSet);
 
     /**
      * This is the default OnInterest callback which searches this node and

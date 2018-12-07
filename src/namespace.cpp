@@ -413,7 +413,7 @@ Namespace::Impl::getDecryptor()
 
 void
 Namespace::Impl::deserialize_
-  (const Blob& blob, const Handler::OnDeserialized& onObjectSet)
+  (const Blob& blob, const Handler::OnObjectSet& onObjectSet)
 {
   Namespace* nameSpace = &outerNamespace_;
   while (nameSpace) {
@@ -572,13 +572,13 @@ Namespace::Impl::fireOnObjectNeeded(Namespace& neededNamespace)
 void
 Namespace::Impl::defaultOnDeserialized
   (const ptr_lib::shared_ptr<Object>& object,
-   const Handler::OnDeserialized& onObjectSet)
+   const Handler::OnObjectSet& onObjectSet)
 {
   object_ = object;
   setState(NamespaceState_OBJECT_READY);
 
   if (onObjectSet)
-    onObjectSet(object);
+    onObjectSet(outerNamespace_);
 }
 
 void
@@ -699,7 +699,7 @@ Namespace::Impl::onData
   decryptor->decrypt
     (encryptedContent,
      bind(&Namespace::Impl::deserialize_, shared_from_this(), _1,
-          Handler::OnDeserialized()),
+          Handler::OnObjectSet()),
      bind(&Namespace::Impl::onDecryptionError, shared_from_this(), _1, _2));
 }
 
