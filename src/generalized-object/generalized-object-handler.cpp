@@ -146,7 +146,7 @@ GeneralizedObjectHandler::Impl::onSegmentedObject
 {
   if (onGeneralizedObject_) {
     try {
-      onGeneralizedObject_(contentMetaInfo, objectNamespace.getObject());
+      onGeneralizedObject_(contentMetaInfo, objectNamespace);
     } catch (const std::exception& ex) {
       _LOG_ERROR("Error in onGeneralizedObject: " << ex.what());
     } catch (...) {

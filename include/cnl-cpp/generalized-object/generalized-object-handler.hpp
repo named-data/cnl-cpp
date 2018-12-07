@@ -37,23 +37,24 @@ class GeneralizedObjectHandler : public Namespace::Handler {
 public:
   typedef ndn::func_lib::function<void
     (const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
-     const ndn::ptr_lib::shared_ptr<Object>& object)> OnGeneralizedObject;
+     Namespace& objectNamespace)> OnGeneralizedObject;
 
   /**
    * Create a GeneralizedObjectHandler with the optional onGeneralizedObject
    * callback.
    * @param onGeneralizedObject (optional) When the ContentMetaInfo is received
    * and the hasSegments is false, this calls 
-   * onGeneralizedObject(contentMetaInfo, object) where contentMetaInfo is the
-   * ContentMetaInfo and object is the "other" info as a BlobObject or possibly
-   * deserialized into another type. If the hasSegments flag is true, when the
-   * segments are received and assembled into a single block of memory, this
-   * calls onGeneralizedObject(contentMetaInfo, object) where contentMetaInfo is
-   * the ContentMetaInfo and object is the object that was assembled from the
-   * segment contents as a BlobObject or possibly deserialized to another type.
-   * If you don't supply an onGeneralizedObject callback here, you can call
-   * addOnStateChanged on the Namespace object to which this is attached and
-   * listen for the OBJECT_READY state.
+   * onGeneralizedObject(contentMetaInfo, objectNamespace) where contentMetaInfo
+   * is the ContentMetaInfo and objectNamespace.getObject() is the "other" info
+   * as a BlobObject or possibly deserialized into another type. If the
+   * hasSegments flag is true, when the segments are received and assembled into
+   * a single block of memory, this calls
+   * onGeneralizedObject(contentMetaInfo, objectNamespace) where contentMetaInfo
+   * is the ContentMetaInfo and objectNamespace.getObject() is the object that
+   * was assembled from the segment contents as a BlobObject or possibly
+   * deserialized to another type. If you don't supply an onGeneralizedObject
+   * callback here, you can call addOnStateChanged on the Namespace object to
+   * which this is attached and listen for the OBJECT_READY state.
    */
   GeneralizedObjectHandler
     (const OnGeneralizedObject& onGeneralizedObject = OnGeneralizedObject())
