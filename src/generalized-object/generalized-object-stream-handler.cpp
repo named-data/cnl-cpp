@@ -147,6 +147,9 @@ GeneralizedObjectStreamHandler::Impl::onGeneralizedObject
   (const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
    Namespace& objectNamespace, int sequenceNumber)
 {
+  // The Handler is finished, so detach it from the Namespace to save resources.
+  objectNamespace.setHandler(ptr_lib::shared_ptr<Handler>());
+
   if (onSequencedGeneralizedObject_) {
     try {
       onSequencedGeneralizedObject_
