@@ -172,6 +172,7 @@ private:
     ndn::ptr_lib::shared_ptr<SegmentedObjectHandler> segmentedObjectHandler_;
     OnGeneralizedObject onGeneralizedObject_;
     Namespace* namespace_;
+    uint64_t onObjectNeededId_;
   };
 
   /**

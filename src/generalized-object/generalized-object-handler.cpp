@@ -39,7 +39,7 @@ GeneralizedObjectHandler::Impl::Impl(const OnGeneralizedObject& onGeneralizedObj
   // here and pass the method calls through.
   segmentedObjectHandler_(ptr_lib::make_shared<SegmentedObjectHandler>()),
   // We'll call onGeneralizedObject if we don't use the SegmentedObjectHandler.
-  onGeneralizedObject_(onGeneralizedObject), namespace_(0)
+  onGeneralizedObject_(onGeneralizedObject), namespace_(0), onObjectNeededId_(0)
 {
 }
 
@@ -77,7 +77,7 @@ GeneralizedObjectHandler::Impl::onNamespaceSet(Namespace* nameSpace)
   // this outer Handler object since it might be destroyed.
   namespace_ = nameSpace;
 
-  namespace_->addOnObjectNeeded
+  onObjectNeededId_ = namespace_->addOnObjectNeeded
     (bind(&GeneralizedObjectHandler::Impl::onObjectNeeded, shared_from_this(), _1, _2, _3));
   // We don't attach the SegmentedObjectHandler until we need it.
 }
@@ -90,6 +90,9 @@ GeneralizedObjectHandler::Impl::onObjectNeeded
     // Don't respond for child namespaces (including when we call objectNeeded
     // on the _meta child below).
     return false;
+
+  // Remove the unused resource.
+  namespace_->removeCallback(onObjectNeededId_);
 
   (*namespace_)[getNAME_COMPONENT_META()].objectNeeded();
   return true;
