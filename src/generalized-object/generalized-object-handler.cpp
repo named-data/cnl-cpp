@@ -121,9 +121,21 @@ GeneralizedObjectHandler::Impl::canDeserialize
       namespace_->getName().size() + nComponentsAfterObjectNamespace_ + 1)
     // This is not a generalized object packet at the correct level under the Namespace.
     return false;
-  if (blobNamespace.getName()[-1] != getNAME_COMPONENT_META())
-    // Not the _meta packet. Ignore.
+  if (blobNamespace.getName()[-1] != getNAME_COMPONENT_META()) {
+    // Not the _meta packet.
+    if (nComponentsAfterObjectNamespace_ > 0 &&
+        (blobNamespace.getName()[-1].isSegment() ||
+         blobNamespace.getName()[-1] == SegmentedObjectHandler::getNAME_COMPONENT_MANIFEST())) {
+      // This is another packet type for a generalized object and we did not try
+      // to fetch the _meta packet in onObjectNeeded. Try fetching it if we
+      // haven't already.
+      Namespace& metaNamespace = (*blobNamespace.getParent())[getNAME_COMPONENT_META()];
+      if (metaNamespace.getState() < NamespaceState_INTEREST_EXPRESSED)
+        metaNamespace.objectNeeded();
+    }
+
     return false;
+  }
 
   // Decode the ContentMetaInfo.
   ptr_lib::shared_ptr<ContentMetaInfoObject> contentMetaInfo =
