@@ -79,6 +79,21 @@ public:
   }
 
   /**
+   * Set the allowChildNamespace for fetching the generalized object as
+   * described below.
+   * @param allowChildNamespace If allowChildNamespace is false (the default),
+   * then enforce that the _meta and segment nodes are directly under the
+   * given Namespace node. If allowChildNamespace is true, allow a the _meta
+   * and segment packets to be under a child of the given Namespace node, which
+   * may not be known until the first _meta packet is fetched.
+   */
+  void
+  setAllowChildNamespace(bool allowChildNamespace)
+  {
+    impl_->setAllowChildNamespace(allowChildNamespace);
+  }
+
+  /**
    * Create a _meta packet with the given contentType and as a child of the
    * given Namespace. If the object is large enough to require segmenting, also
    * segment the object and create child segment packets plus a signature
@@ -193,6 +208,12 @@ private:
     Impl(const OnGeneralizedObject& onGeneralizedObject);
 
     void
+    setAllowChildNamespace(bool allowChildNamespace)
+    {
+      allowChildNamespace_ = allowChildNamespace;
+    }
+
+    void
     onNamespaceSet(Namespace* nameSpace);
 
     SegmentedObjectHandler&
@@ -268,6 +289,7 @@ private:
     ndn::ptr_lib::shared_ptr<SegmentedObjectHandler> segmentedObjectHandler_;
     OnGeneralizedObject onGeneralizedObject_;
     Namespace* namespace_;
+    bool allowChildNamespace_;
     uint64_t onObjectNeededId_;
   };
 

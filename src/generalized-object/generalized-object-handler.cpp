@@ -39,7 +39,8 @@ GeneralizedObjectHandler::Impl::Impl(const OnGeneralizedObject& onGeneralizedObj
   // here and pass the method calls through.
   segmentedObjectHandler_(ptr_lib::make_shared<SegmentedObjectHandler>()),
   // We'll call onGeneralizedObject if we don't use the SegmentedObjectHandler.
-  onGeneralizedObject_(onGeneralizedObject), namespace_(0), onObjectNeededId_(0)
+  onGeneralizedObject_(onGeneralizedObject), namespace_(0),
+  allowChildNamespace_(false), onObjectNeededId_(0)
 {
 }
 
@@ -86,6 +87,11 @@ bool
 GeneralizedObjectHandler::Impl::onObjectNeeded
   (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId)
 {
+  if (allowChildNamespace_)
+    // For a child Namespace, we don't know the name of the _meta packet.
+    // Assume the application will make sure the _meta packet is fetched.
+    return false;
+
   if (&neededNamespace != namespace_)
     // Don't respond for child namespaces (including when we call objectNeeded
     // on the _meta child below).
@@ -103,10 +109,14 @@ GeneralizedObjectHandler::Impl::canDeserialize
   (Namespace& metaNamespace, const Blob& blob,
    const OnDeserialized& onDeserialized)
 {
-  if (!(metaNamespace.getName().size() == namespace_->getName().size() + 1 &&
-        metaNamespace.getName()[-1] == getNAME_COMPONENT_META()))
+  if (metaNamespace.getName()[-1] != getNAME_COMPONENT_META())
     // Not the _meta packet. Ignore.
     return false;
+  if (!allowChildNamespace_) {
+    if (metaNamespace.getName().size() != namespace_->getName().size() + 1)
+      // If not allowing a child namespace, ignore if _meta is not a direct child.
+      return false;
+  }
 
   // Decode the ContentMetaInfo.
   ptr_lib::shared_ptr<ContentMetaInfoObject> contentMetaInfo =
