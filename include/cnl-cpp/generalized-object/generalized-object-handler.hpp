@@ -151,7 +151,7 @@ private:
 
     bool
     canDeserialize
-      (Namespace& objectNamespace, const ndn::Blob& blob,
+      (Namespace& metaNamespace, const ndn::Blob& blob,
        const OnDeserialized& onDeserialized);
 
   private:

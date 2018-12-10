@@ -100,11 +100,11 @@ GeneralizedObjectHandler::Impl::onObjectNeeded
 
 bool
 GeneralizedObjectHandler::Impl::canDeserialize
-  (Namespace& objectNamespace, const Blob& blob,
+  (Namespace& metaNamespace, const Blob& blob,
    const OnDeserialized& onDeserialized)
 {
-  if (!(objectNamespace.getName().size() == namespace_->getName().size() + 1 &&
-        objectNamespace.getName()[-1] == getNAME_COMPONENT_META()))
+  if (!(metaNamespace.getName().size() == namespace_->getName().size() + 1 &&
+        metaNamespace.getName()[-1] == getNAME_COMPONENT_META()))
     // Not the _meta packet. Ignore.
     return false;
 
@@ -117,24 +117,25 @@ GeneralizedObjectHandler::Impl::canDeserialize
   // This will set the object for the _meta Namespace node.
   onDeserialized(contentMetaInfo);
 
+  Namespace& objectNamespace = *metaNamespace.getParent();
   if (contentMetaInfo->getHasSegments()) {
     // Initiate fetching segments. This will call onGeneralizedObject.
     segmentedObjectHandler_->addOnSegmentedObject
       (bind(&GeneralizedObjectHandler::Impl::onSegmentedObject,
        shared_from_this(), _1, contentMetaInfo));
-    segmentedObjectHandler_->setNamespace(namespace_);
+    segmentedObjectHandler_->setNamespace(&objectNamespace);
     // Explicitly request segment 0 to avoid fetching _meta, etc.
-    (*namespace_)[Name::Component::fromSegment(0)].objectNeeded();
+    objectNamespace[Name::Component::fromSegment(0)].objectNeeded();
 
     // Fetch the _manifest packet.
     // getAllData(dataList): Verification should be handled by SegmentedObjectHandler.
     // TODO: How does SegmentedObjectHandler consumer know we're using a _manifest?
-    (*namespace_)[SegmentedObjectHandler::getNAME_COMPONENT_MANIFEST()].objectNeeded();
+    objectNamespace[SegmentedObjectHandler::getNAME_COMPONENT_MANIFEST()].objectNeeded();
   }
   else
     // No segments, so the object is the ContentMetaInfo "other" Blob.
     // Deserialize and call the same callback as the segmentedObjectHandler.
-    namespace_->deserialize_
+    objectNamespace.deserialize_
       (contentMetaInfo->getOther(),
        bind(&GeneralizedObjectHandler::Impl::onSegmentedObject,
        shared_from_this(), _1, contentMetaInfo));
