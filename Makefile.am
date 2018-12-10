@@ -23,7 +23,9 @@ pkgconfig_DATA = libcnl-cpp.pc
 noinst_PROGRAMS = bin/test-generalized-object-consumer \
   bin/test-generalized-object-producer bin/test-generalized-object-stream-consumer \
   bin/test-generalized-object-stream-producer bin/test-nac-consumer \
-  bin/test-nac-producer bin/test-segmented
+  bin/test-nac-producer bin/test-segmented \
+  bin/test-versioned-generalized-object-consumer \
+  bin/test-versioned-generalized-object-producer
 
 # Public C++ headers.
 # NOTE: If a new directory is added, then add it to cnl_cpp_cpp_headers in include/Makefile.am.
@@ -68,5 +70,11 @@ bin_test_nac_producer_LDADD = libcnl-cpp.la
 
 bin_test_segmented_SOURCES = examples/test-segmented.cpp
 bin_test_segmented_LDADD = libcnl-cpp.la
+
+bin_test_versioned_generalized_object_consumer_SOURCES = examples/test-versioned-generalized-object-consumer.cpp
+bin_test_versioned_generalized_object_consumer_LDADD = libcnl-cpp.la
+
+bin_test_versioned_generalized_object_producer_SOURCES = examples/test-versioned-generalized-object-producer.cpp
+bin_test_versioned_generalized_object_producer_LDADD = libcnl-cpp.la
 
 dist_noinst_SCRIPTS = autogen.sh
