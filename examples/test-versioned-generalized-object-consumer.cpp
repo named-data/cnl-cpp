@@ -52,8 +52,8 @@ int main(int argc, char** argv)
       enabled = false;
     };
     auto handler = ptr_lib::make_shared<GeneralizedObjectHandler>(onObject);
-    // Allow a child Namespace with <version> after the prefix.
-    handler->setAllowChildNamespace(true);
+    // Allow one component after the prefix for the <version>.
+    handler->setNComponentsAfterObjectNamespace(1);
     // In objectNeeded, set mustBeFresh == true so we avoid expired cached data.
     prefix.setHandler(handler).objectNeeded(true);
 
