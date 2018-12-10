@@ -114,14 +114,14 @@ GeneralizedObjectHandler::Impl::onObjectNeeded
 
 bool
 GeneralizedObjectHandler::Impl::canDeserialize
-  (Namespace& metaNamespace, const Blob& blob,
+  (Namespace& blobNamespace, const Blob& blob,
    const OnDeserialized& onDeserialized)
 {
-  if (metaNamespace.getName().size() !=
+  if (blobNamespace.getName().size() !=
       namespace_->getName().size() + nComponentsAfterObjectNamespace_ + 1)
     // This is not a generalized object packet at the correct level under the Namespace.
     return false;
-  if (metaNamespace.getName()[-1] != getNAME_COMPONENT_META())
+  if (blobNamespace.getName()[-1] != getNAME_COMPONENT_META())
     // Not the _meta packet. Ignore.
     return false;
 
@@ -134,7 +134,7 @@ GeneralizedObjectHandler::Impl::canDeserialize
   // This will set the object for the _meta Namespace node.
   onDeserialized(contentMetaInfo);
 
-  Namespace& objectNamespace = *metaNamespace.getParent();
+  Namespace& objectNamespace = *blobNamespace.getParent();
   if (contentMetaInfo->getHasSegments()) {
     // Initiate fetching segments. This will call onGeneralizedObject.
     segmentedObjectHandler_->addOnSegmentedObject

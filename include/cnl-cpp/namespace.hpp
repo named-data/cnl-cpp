@@ -126,11 +126,11 @@ public:
 
     /**
      * An internal method to check if this Handler can deserialize the blob in
-     * order to set the object for the objectNamespace. This should only be
+     * order to set the object for the blobNamespace. This should only be
      * called by the Namespace class. This base implementation just returns
      * false. The subclass can override.
-     * @param objectNamespace The Namespace node which needs its object
-     * deserialized.
+     * @param blobNamespace The Namespace node which needs its Blob
+     * deserialized to an object.
      * @param blob The serialized bytes to deserialize.
      * @param onDeserialized If the Handler can deserialize, it should return
      * true and eventually call onDeserialized(object) with the deserialized
@@ -140,7 +140,7 @@ public:
      */
     virtual bool
     canDeserialize
-      (Namespace& objectNamespace, const ndn::Blob& blob,
+      (Namespace& blobNamespace, const ndn::Blob& blob,
        const OnDeserialized& onDeserialized);
 
   protected:

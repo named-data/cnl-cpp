@@ -47,7 +47,7 @@ Namespace::Handler::setNamespace(Namespace* nameSpace)
 
 bool
 Namespace::Handler::canDeserialize
-  (Namespace& objectNamespace, const Blob& blob,
+  (Namespace& blobNamespace, const Blob& blob,
    const OnDeserialized& onDeserialized)
 {
   return false;

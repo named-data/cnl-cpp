@@ -186,10 +186,10 @@ public:
    */
   virtual bool
   canDeserialize
-    (Namespace& objectNamespace, const ndn::Blob& blob,
+    (Namespace& blobNamespace, const ndn::Blob& blob,
      const OnDeserialized& onDeserialized)
   {
-    return impl_->canDeserialize(objectNamespace, blob, onDeserialized);
+    return impl_->canDeserialize(blobNamespace, blob, onDeserialized);
   }
 
 protected:
@@ -268,7 +268,7 @@ private:
 
     bool
     canDeserialize
-      (Namespace& metaNamespace, const ndn::Blob& blob,
+      (Namespace& blobNamespace, const ndn::Blob& blob,
        const OnDeserialized& onDeserialized);
 
   private:
