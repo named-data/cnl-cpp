@@ -79,15 +79,6 @@ public:
   }
 
   /**
-   * Get the SegmentedObjectHandler which is used to segment an object and fetch
-   * segments. You can use this to set parameters such as
-   * getSegmentedObjectHandler().setInterestPipelineSize().
-   * @return The SegmentedObjectHandler.
-   */
-  SegmentedObjectHandler&
-  getSegmentedObjectHandler() { return impl_->getSegmentedObjectHandler(); }
-
-  /**
    * Create a _meta packet with the given contentType and as a child of the
    * given Namespace. If the object is large enough to require segmenting, also
    * segment the object and create child segment packets plus a signature
@@ -103,6 +94,69 @@ public:
      const std::string& contentType)
   {
     impl_->setObject(nameSpace, object, contentType);
+  }
+
+  /**
+   * Get the number of outstanding interests which this maintains while fetching
+   * segments (if the ContentMetaInfo hasSegments is true).
+   * @return The Interest pipeline size.
+   */
+  int
+  getInterestPipelineSize() { return impl_->getInterestPipelineSize(); }
+
+  /**
+   * Set the number of outstanding interests which this maintains while fetching
+   * segments (if the ContentMetaInfo hasSegments is true).
+   * @param interestPipelineSize The Interest pipeline size.
+   * @throws runtime_error if interestPipelineSize is less than 1.
+   */
+  void
+  setInterestPipelineSize(int interestPipelineSize)
+  {
+    impl_->setInterestPipelineSize(interestPipelineSize);
+  }
+
+  /**
+   * Get the initial Interest count (if the ContentMetaInfo hasSegments is true),
+   * as described in setInitialInterestCount.
+   * @return The initial Interest count.
+   */
+  int
+  getInitialInterestCount() { return impl_->getInitialInterestCount(); }
+
+  /**
+   * Set the number of initial Interests to send for segments (if the
+   * ContentMetaInfo hasSegments is true). By default this
+   * just sends an Interest for the first segment and waits for the response
+   * before fetching more segments, but if you know the number of segments you
+   * can reduce latency by initially requesting more segments. (However, you
+   * should not use a number larger than the Interest pipeline size.)
+   * @param initialInterestCount The initial Interest count.
+   * @throws runtime_error if initialInterestCount is less than 1.
+   */
+  void
+  setInitialInterestCount(int initialInterestCount)
+  {
+    impl_->setInitialInterestCount(initialInterestCount);
+  }
+
+  /**
+   * Get the maximum length of the payload of one segment, used to split a
+   * larger payload into segments (if the ContentMetaInfo hasSegments is true).
+   * @return The maximum payload length.
+   */
+  size_t
+  getMaxSegmentPayloadLength() { return impl_->getMaxSegmentPayloadLength(); }
+
+  /**
+   * Set the maximum length of the payload of one segment, used to split a
+   * larger payload into segments (if the ContentMetaInfo hasSegments is true).
+   * @param maxSegmentPayloadLength The maximum payload length.
+   */
+  void
+  setMaxSegmentPayloadLength(size_t maxSegmentPayloadLength)
+  {
+    impl_->setMaxSegmentPayloadLength(maxSegmentPayloadLength);
   }
 
   static const ndn::Name::Component&
@@ -148,6 +202,48 @@ private:
     setObject
       (Namespace& nameSpace, const ndn::Blob& object,
        const std::string& contentType);
+
+    int
+    getInterestPipelineSize()
+    {
+      // Pass through to the SegmentedObjectHandler.
+      return segmentedObjectHandler_->getInterestPipelineSize();
+    }
+
+    void
+    setInterestPipelineSize(int interestPipelineSize)
+    {
+      // Pass through to the SegmentedObjectHandler.
+      segmentedObjectHandler_->setInterestPipelineSize(interestPipelineSize);
+    }
+
+    int
+    getInitialInterestCount()
+    {
+      // Pass through to the SegmentedObjectHandler.
+      return segmentedObjectHandler_->getInitialInterestCount();
+    }
+
+    void
+    setInitialInterestCount(int initialInterestCount)
+    {
+      // Pass through to the SegmentedObjectHandler.
+      segmentedObjectHandler_->setInitialInterestCount(initialInterestCount);
+    }
+
+    size_t
+    getMaxSegmentPayloadLength()
+    {
+      // Pass through to the SegmentedObjectHandler.
+      return segmentedObjectHandler_->getMaxSegmentPayloadLength();
+    }
+
+    void
+    setMaxSegmentPayloadLength(size_t maxSegmentPayloadLength)
+    {
+      // Pass through to the SegmentedObjectHandler.
+      segmentedObjectHandler_->setMaxSegmentPayloadLength(maxSegmentPayloadLength);
+    }
 
     bool
     canDeserialize
