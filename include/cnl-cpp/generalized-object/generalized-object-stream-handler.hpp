@@ -71,15 +71,6 @@ public:
   }
 
   /**
-   * Get the getGeneralizedObjectHandlerwhich is used to segment an object. You
-   * can use this to set parameters such as
-   * getGeneralizedObjectHandler().getSegmentedObjectHandler().setMaxSegmentPayloadLength().
-   * @return The GeneralizedObjectHandler.
-   */
-  GeneralizedObjectHandler&
-  getGeneralizedObjectHandler() { return impl_->getGeneralizedObjectHandler(); }
-
-  /**
    * Prepare the generalized object as a child of the given sequence number
    * Namespace node under the getNamespace() node, according to
    * GeneralizedObjectHandler.setObject. Also prepare to answer requests for the
@@ -123,13 +114,24 @@ public:
   getLatestPacketFreshnessPeriod() { return impl_->getLatestPacketFreshnessPeriod(); }
 
   /**
-   * Set the freshness period to use for the produced _latest data packet.
-   * @param latestPacketFreshnessPeriod The freshness period in milliseconds.
+   * Get the maximum length of the payload of one segment, used to split a
+   * larger payload into segments (if the ContentMetaInfo hasSegments is true
+   * for a particular generalized object).
+   * @return The maximum payload length.
+   */
+  size_t
+  getMaxSegmentPayloadLength() { return impl_->getMaxSegmentPayloadLength(); }
+
+  /**
+   * Set the maximum length of the payload of one segment, used to split a
+   * larger payload into segments (if the ContentMetaInfo hasSegments is true
+   * for a particular generalized object).
+   * @param maxSegmentPayloadLength The maximum payload length.
    */
   void
-  setLatestPacketFreshnessPeriod(ndn::Milliseconds latestPacketFreshnessPeriod)
+  setMaxSegmentPayloadLength(size_t maxSegmentPayloadLength)
   {
-    impl_->setLatestPacketFreshnessPeriod(latestPacketFreshnessPeriod);
+    impl_->setMaxSegmentPayloadLength(maxSegmentPayloadLength);
   }
 
   static const ndn::Name::Component&
@@ -173,6 +175,20 @@ private:
     setLatestPacketFreshnessPeriod(ndn::Milliseconds latestPacketFreshnessPeriod)
     {
       latestPacketFreshnessPeriod_ = latestPacketFreshnessPeriod;
+    }
+
+    size_t
+    getMaxSegmentPayloadLength()
+    {
+      // Pass through to the GeneralizedObjectHandler.
+      return generalizedObjectHandler_.getMaxSegmentPayloadLength();
+    }
+
+    void
+    setMaxSegmentPayloadLength(size_t maxSegmentPayloadLength)
+    {
+      // Pass through to the GeneralizedObjectHandler.
+      generalizedObjectHandler_.setMaxSegmentPayloadLength(maxSegmentPayloadLength);
     }
 
     void
