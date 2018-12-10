@@ -40,8 +40,17 @@ GeneralizedObjectHandler::Impl::Impl(const OnGeneralizedObject& onGeneralizedObj
   segmentedObjectHandler_(ptr_lib::make_shared<SegmentedObjectHandler>()),
   // We'll call onGeneralizedObject if we don't use the SegmentedObjectHandler.
   onGeneralizedObject_(onGeneralizedObject), namespace_(0),
-  allowChildNamespace_(false), onObjectNeededId_(0)
+  nComponentsAfterObjectNamespace_(0), onObjectNeededId_(0)
 {
+}
+
+void
+GeneralizedObjectHandler::Impl::setNComponentsAfterObjectNamespace
+  (int nComponentsAfterObjectNamespace)
+{
+  if (nComponentsAfterObjectNamespace < 0)
+    throw runtime_error("setNComponentsAfterObjectNamespace: The value cannot be negative");
+  nComponentsAfterObjectNamespace_ = nComponentsAfterObjectNamespace;
 }
 
 void
@@ -87,9 +96,8 @@ bool
 GeneralizedObjectHandler::Impl::onObjectNeeded
   (Namespace& nameSpace, Namespace& neededNamespace, uint64_t callbackId)
 {
-  if (allowChildNamespace_)
-    // For a child Namespace, we don't know the name of the _meta packet.
-    // Assume the application will make sure the _meta packet is fetched.
+  if (nComponentsAfterObjectNamespace_ > 0)
+    // For extra components, we don't know the name of the _meta packet.
     return false;
 
   if (&neededNamespace != namespace_)
@@ -109,14 +117,13 @@ GeneralizedObjectHandler::Impl::canDeserialize
   (Namespace& metaNamespace, const Blob& blob,
    const OnDeserialized& onDeserialized)
 {
+  if (metaNamespace.getName().size() !=
+      namespace_->getName().size() + nComponentsAfterObjectNamespace_ + 1)
+    // This is not a generalized object packet at the correct level under the Namespace.
+    return false;
   if (metaNamespace.getName()[-1] != getNAME_COMPONENT_META())
     // Not the _meta packet. Ignore.
     return false;
-  if (!allowChildNamespace_) {
-    if (metaNamespace.getName().size() != namespace_->getName().size() + 1)
-      // If not allowing a child namespace, ignore if _meta is not a direct child.
-      return false;
-  }
 
   // Decode the ContentMetaInfo.
   ptr_lib::shared_ptr<ContentMetaInfoObject> contentMetaInfo =

@@ -79,18 +79,21 @@ public:
   }
 
   /**
-   * Set the allowChildNamespace for fetching the generalized object as
-   * described below.
-   * @param allowChildNamespace If allowChildNamespace is false (the default),
-   * then enforce that the _meta and segment nodes are directly under the
-   * given Namespace node. If allowChildNamespace is true, allow a the _meta
-   * and segment packets to be under a child of the given Namespace node, which
-   * may not be known until the first _meta packet is fetched.
+   * Set the number of name components after the object Namespace for fetching
+   * the generalized object, as described below.
+   * @param nComponentsAfterObjectNamespace If nComponentsAfterObjectNamespace
+   * is zero (the default), then require that the _meta and segment nodes are
+   * directly under the given Namespace name for the object. If
+   * nComponentsAfterObjectNamespace is greater than zero, allow exactly this
+   * number of name components after the given Namespace name but before the
+   * _meta and segment packets. In this case, the value of these name
+   * components may not be known before the first packet is fetched.
+   * @throws runtime_error if nComponentsAfterObjectNamespace is negative.
    */
   void
-  setAllowChildNamespace(bool allowChildNamespace)
+  setNComponentsAfterObjectNamespace(int nComponentsAfterObjectNamespace)
   {
-    impl_->setAllowChildNamespace(allowChildNamespace);
+    impl_->setNComponentsAfterObjectNamespace(nComponentsAfterObjectNamespace);
   }
 
   /**
@@ -208,10 +211,7 @@ private:
     Impl(const OnGeneralizedObject& onGeneralizedObject);
 
     void
-    setAllowChildNamespace(bool allowChildNamespace)
-    {
-      allowChildNamespace_ = allowChildNamespace;
-    }
+    setNComponentsAfterObjectNamespace(int nComponentsAfterObjectNamespace);
 
     void
     onNamespaceSet(Namespace* nameSpace);
@@ -289,7 +289,7 @@ private:
     ndn::ptr_lib::shared_ptr<SegmentedObjectHandler> segmentedObjectHandler_;
     OnGeneralizedObject onGeneralizedObject_;
     Namespace* namespace_;
-    bool allowChildNamespace_;
+    int nComponentsAfterObjectNamespace_;
     uint64_t onObjectNeededId_;
   };
 
