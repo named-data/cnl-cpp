@@ -40,8 +40,8 @@ GeneralizedObjectStreamHandler::Impl::Impl
   latestNamespace_(0), producedSequenceNumber_(-1),
   latestPacketFreshnessPeriod_(1000.0), maxReportedSequenceNumber_(-1)
 {
-  if (pipelineSize_ < 1)
-    pipelineSize_ = 1;
+  if (pipelineSize_ < 0)
+    pipelineSize_ = 0;
 }
 
 void
@@ -137,8 +137,32 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
   // We may already have the target if this was triggered by the producer.
   if (!targetNamespace.getObject()) {
     int sequenceNumber = targetName[-1].toSequenceNumber();
-    maxReportedSequenceNumber_ = sequenceNumber - 1;
-    requestNewSequenceNumbers();
+
+    if (pipelineSize_ == 0) {
+      // Fetch one generalized object.
+      ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
+        ptr_lib::make_shared<GeneralizedObjectHandler>
+          (bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
+                shared_from_this(), _1, _2, sequenceNumber));
+      targetNamespace.setHandler(generalizedObjectHandler);
+      targetNamespace[GeneralizedObjectHandler::getNAME_COMPONENT_META()].objectNeeded();
+    }
+    else {
+      // Fetch by continuously filling the Interest pipeline.
+      maxReportedSequenceNumber_ = sequenceNumber - 1;
+      requestNewSequenceNumbers();
+    }
+  }
+
+  if (pipelineSize_ == 0) {
+    // Schedule to fetch the next _latest packet.
+    Milliseconds freshnessPeriod =
+      changedNamespace.getData()->getMetaInfo().getFreshnessPeriod();
+    if (freshnessPeriod < 0)
+      // No freshness period. We don't expect this.
+      return;
+    latestNamespace_->getFace_()->callLater
+      (freshnessPeriod / 2, [=]{ latestNamespace_->objectNeeded(true); });
   }
 }
 
@@ -163,7 +187,10 @@ GeneralizedObjectStreamHandler::Impl::onGeneralizedObject
 
   if (sequenceNumber > maxReportedSequenceNumber_)
     maxReportedSequenceNumber_ = sequenceNumber;
-  requestNewSequenceNumbers();
+
+  if (pipelineSize_ > 0)
+    // Continue to fetch by filling the pipeline.
+    requestNewSequenceNumbers();
 }
 
 void

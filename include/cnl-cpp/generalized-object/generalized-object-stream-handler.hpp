@@ -30,6 +30,8 @@ namespace cnl_cpp {
  * GeneralizedObjectStreamHandler extends Namespace::Handler and attaches to a
  * Namespace node to fetch the _latest packet and use the name in it to start
  * fetching the stream of generalized object using a GeneralizedObjectHandler.
+ * However, if the pipelineSize is zero, continually fetch the _latest packet
+ * and use its name to fetch the generalized object.
  */
 class GeneralizedObjectStreamHandler : public Namespace::Handler {
 public:
@@ -44,6 +46,10 @@ public:
    * @param pipelineSize (optional) The pipeline size (number of objects, not
    * interests). The pipelineSize times the expected period between objects
    * should be less than the maximum interest lifetime.
+   * However, if pipelineSize is zero, continually fetch the _latest packet and
+   * use its name to fetch the generalized object. In this case, the producer
+   * can call setLatestPacketFreshnessPeriod to set the expected period of
+   * producing new generalized objects.
    * @param onSequencedGeneralizedObject (optional) When the ContentMetaInfo is
    * received for a new sequence number and the hasSegments is false, this calls
    * onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, objectNamespace)
@@ -112,6 +118,16 @@ public:
    */
   ndn::Milliseconds
   getLatestPacketFreshnessPeriod() { return impl_->getLatestPacketFreshnessPeriod(); }
+
+  /**
+   * Set the freshness period to use for the produced _latest data packet.
+   * @param latestPacketFreshnessPeriod The freshness period in milliseconds.
+   */
+  void
+  setLatestPacketFreshnessPeriod(ndn::Milliseconds latestPacketFreshnessPeriod)
+  {
+    impl_->setLatestPacketFreshnessPeriod(latestPacketFreshnessPeriod);
+  }
 
   /**
    * Get the maximum length of the payload of one segment, used to split a
