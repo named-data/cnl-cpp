@@ -48,8 +48,8 @@ public:
    * should be less than the maximum interest lifetime.
    * However, if pipelineSize is zero, continually fetch the _latest packet and
    * use its name to fetch the generalized object. In this case, the producer
-   * can call setLatestPacketFreshnessPeriod to set the expected period of
-   * producing new generalized objects.
+   * can call setLatestPacketFreshnessPeriod to set the freshness period to less
+   * than the expected period of producing new generalized objects.
    * @param onSequencedGeneralizedObject (optional) When the ContentMetaInfo is
    * received for a new sequence number and the hasSegments is false, this calls
    * onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, objectNamespace)
