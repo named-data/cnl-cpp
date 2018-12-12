@@ -150,6 +150,15 @@ SegmentedObjectHandler::Impl::onSegment(Namespace* segmentNamespace)
   if (segmentNamespace) {
     segments_.push_back(segmentNamespace->getBlobObject());
     totalSize_ += segmentNamespace->getBlobObject().size();
+
+    if (dynamic_cast<const DigestSha256Signature *>
+        (segmentNamespace->getData()->getSignature())) {
+      // Assume we are using a signature _manifest.
+      Namespace& manifestNamespace = (*namespace_)[getNAME_COMPONENT_MANIFEST()];
+      if (manifestNamespace.getState() < NamespaceState_INTEREST_EXPRESSED)
+        // We haven't requested the signature _manifest yet.
+        manifestNamespace.objectNeeded();
+    }
   }
   else {
       // Concatenate the segments.

@@ -155,11 +155,6 @@ GeneralizedObjectHandler::Impl::canDeserialize
     segmentedObjectHandler_->setNamespace(&objectNamespace);
     // Explicitly request segment 0 to avoid fetching _meta, etc.
     objectNamespace[Name::Component::fromSegment(0)].objectNeeded();
-
-    // Fetch the _manifest packet.
-    // getAllData(dataList): Verification should be handled by SegmentedObjectHandler.
-    // TODO: How does SegmentedObjectHandler consumer know we're using a _manifest?
-    objectNamespace[SegmentedObjectHandler::getNAME_COMPONENT_MANIFEST()].objectNeeded();
   }
   else
     // No segments, so the object is the ContentMetaInfo "other" Blob.
