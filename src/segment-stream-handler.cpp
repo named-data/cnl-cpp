@@ -19,7 +19,13 @@
  * A copy of the GNU Lesser General Public License is in the file COPYING.
  */
 
+#if NDN_CPP_HAVE_MEMORY_H
+#include <memory.h>
+#else
+#include <string.h>
+#endif
 #include <ndn-cpp/util/logging.hpp>
+#include <ndn-cpp/digest-sha256-signature.hpp>
 #include <cnl-cpp/segment-stream-handler.hpp>
 
 using namespace std;
@@ -41,7 +47,8 @@ SegmentStreamHandler::onNamespaceSet()
 SegmentStreamHandler::Impl::Impl(const OnSegment& onSegment)
 : maxReportedSegmentNumber_(-1), didRequestFinalSegment_(false),
   finalSegmentNumber_(-1), interestPipelineSize_(8), initialInterestCount_(1),
-  onObjectNeededId_(0), onStateChangedId_(0), namespace_(0)
+  onObjectNeededId_(0), onStateChangedId_(0), namespace_(0),
+  maxSegmentPayloadLength_(8192)
 {
   if (onSegment)
     addOnSegment(onSegment);
@@ -75,6 +82,89 @@ SegmentStreamHandler::Impl::setInitialInterestCount(int initialInterestCount)
   if (initialInterestCount < 1)
     throw runtime_error("The initial Interest count must be at least 1");
   initialInterestCount_ = initialInterestCount;
+}
+
+void
+SegmentStreamHandler::Impl::setMaxSegmentPayloadLength
+  (size_t maxSegmentPayloadLength)
+{
+  if (maxSegmentPayloadLength < 1)
+    throw runtime_error("The maximum segment payload length must be at least 1");
+  maxSegmentPayloadLength_ = maxSegmentPayloadLength;
+}
+
+void
+SegmentStreamHandler::Impl::setObject
+  (Namespace& nameSpace, const ndn::Blob& object, bool useSignatureManifest)
+{
+  KeyChain* keyChain = nameSpace.getKeyChain_();
+  if (!keyChain)
+    throw runtime_error("SegmentedObjectHandler.setObject: There is no KeyChain");
+
+  // Get the final block ID.
+  uint64_t finalSegment = 0;
+  // Instead of a brute calculation, imitate the loop we will use below.
+  uint64_t segment = 0;
+  for (size_t offset = 0; offset < object.size();
+       offset += maxSegmentPayloadLength_) {
+    finalSegment = segment;
+    ++segment;
+  }
+  Name::Component finalBlockId = Name().appendSegment(finalSegment)[0];
+
+  ptr_lib::shared_ptr<vector<uint8_t> > manifestContent;
+  DigestSha256Signature digestSignature;
+  if (useSignatureManifest) {
+    // Get ready to save the segment implicit digests.
+    manifestContent.reset
+      (new vector<uint8_t>((finalSegment + 1) * ndn_SHA256_DIGEST_SIZE));
+
+    // Use a DigestSha256Signature with all zeros.
+    ptr_lib::shared_ptr<vector<uint8_t> > zeros
+      (new vector<uint8_t>(ndn_SHA256_DIGEST_SIZE));
+    memset(&zeros->front(), 0, ndn_SHA256_DIGEST_SIZE);
+    digestSignature.setSignature(Blob(zeros, false));
+  }
+
+  segment = 0;
+  for (size_t offset = 0; offset < object.size();
+       offset += maxSegmentPayloadLength_) {
+    size_t payloadLength = maxSegmentPayloadLength_;
+    if (offset + payloadLength > object.size())
+      payloadLength = object.size() - offset;
+
+    // Make the Data packet.
+    Namespace& segmentNamespace = nameSpace[Name::Component::fromSegment(segment)];
+    ptr_lib::shared_ptr<Data> data =
+      ptr_lib::make_shared<Data>(segmentNamespace.getName());
+    data->getMetaInfo().setFinalBlockId(finalBlockId);
+    data->setContent(Blob(object.buf() + offset, payloadLength));
+
+    if (useSignatureManifest) {
+      data->setSignature(digestSignature);
+
+      // Append the implicit digest to the manifestContent.
+      const Blob& implicitDigest = (*data->getFullName())[-1].getValue();
+      size_t digestOffset = segment * ndn_SHA256_DIGEST_SIZE;
+      memcpy
+        (&manifestContent->front() + digestOffset, implicitDigest.buf(),
+         ndn_SHA256_DIGEST_SIZE);
+    }
+    else
+      keyChain->sign(*data);
+
+    segmentNamespace.setData(data);
+
+    ++segment;
+  }
+
+  if (useSignatureManifest)
+    // Create the _manifest data packet.
+    nameSpace[getNAME_COMPONENT_MANIFEST()].serializeObject
+      (ptr_lib::make_shared<BlobObject>(Blob(manifestContent, false)));
+
+  // TODO: Do this in a canSerialize callback from Namespace.serializeObject?
+  nameSpace.setObject_(ptr_lib::make_shared<BlobObject>(object));
 }
 
 void
@@ -125,6 +215,15 @@ SegmentStreamHandler::Impl::onStateChanged
 
     maxReportedSegmentNumber_ = nextSegmentNumber;
     fireOnSegment(&nextSegment);
+
+    if (dynamic_cast<const DigestSha256Signature *>
+        (nextSegment.getData()->getSignature())) {
+      // Assume we are using a signature _manifest.
+      Namespace& manifestNamespace = (*namespace_)[getNAME_COMPONENT_MANIFEST()];
+      if (manifestNamespace.getState() < NamespaceState_INTEREST_EXPRESSED)
+        // We haven't requested the signature _manifest yet.
+        manifestNamespace.objectNeeded();
+    }
 
     if (finalSegmentNumber_ >= 0 && nextSegmentNumber == finalSegmentNumber_) {
       // Finished.
@@ -212,5 +311,7 @@ SegmentStreamHandler::Impl::fireOnSegment(Namespace* segmentNamespace)
     }
   }
 }
+
+SegmentStreamHandler::Values* SegmentStreamHandler::values_ = 0;
 
 }

@@ -130,6 +130,46 @@ public:
     impl_->setInitialInterestCount(initialInterestCount);
   }
 
+  /**
+   * Get the maximum length of the payload of one segment, used to split a
+   * larger payload into segments.
+   * @return The maximum payload length.
+   */
+  size_t
+  getMaxSegmentPayloadLength() { return impl_->getMaxSegmentPayloadLength(); }
+
+  /**
+   * Set the maximum length of the payload of one segment, used to split a
+   * larger payload into segments.
+   * @param maxSegmentPayloadLength The maximum payload length.
+   */
+  void
+  setMaxSegmentPayloadLength(size_t maxSegmentPayloadLength)
+  {
+    impl_->setMaxSegmentPayloadLength(maxSegmentPayloadLength);
+  }
+
+  /**
+   * Segment the object and create child segment packets of the given Namespace.
+   * @param nameSpace The Namespace to append segment packets to. This
+   * ignores the Namespace from setNamespace().
+   * @param object The object to segment.
+   * @param useSignatureManifest (optional) If true, only use a
+   * DigestSha256Signature on the segment packets and create a signed
+   * _manifest packet as a child of the given Namespace. If omitted or false,
+   * sign each segment packet individually.
+   */
+  void
+  setObject
+    (Namespace& nameSpace, const ndn::Blob& object,
+     bool useSignatureManifest = false)
+  {
+    impl_->setObject(nameSpace, object, useSignatureManifest);
+  }
+
+  static const ndn::Name::Component&
+  getNAME_COMPONENT_MANIFEST() { return getValues().NAME_COMPONENT_MANIFEST; }
+
 protected:
   virtual void
   onNamespaceSet();
@@ -165,6 +205,16 @@ private:
 
     void
     setInitialInterestCount(int initialInterestCount);
+
+    size_t
+    getMaxSegmentPayloadLength() { return maxSegmentPayloadLength_; }
+
+    void
+    setMaxSegmentPayloadLength(size_t maxSegmentPayloadLength);
+
+    void
+    setObject
+      (Namespace& nameSpace, const ndn::Blob& object, bool useSignatureManifest);
 
     void
     onNamespaceSet(Namespace* nameSpace);
@@ -202,9 +252,37 @@ private:
     uint64_t onObjectNeededId_;
     uint64_t onStateChangedId_;
     Namespace* namespace_;
+    size_t maxSegmentPayloadLength_;
   };
 
+  /**
+   * Values holds values used by the static member values_.
+   */
+  class Values {
+  public:
+    Values()
+    : NAME_COMPONENT_MANIFEST("_manifest")
+    {}
+
+    ndn::Name::Component NAME_COMPONENT_MANIFEST;
+  };
+
+  /**
+   * Get the static Values object, creating it if needed. We do this explicitly
+   * because some C++ environments don't handle static constructors well.
+   * @return The static Values object.
+   */
+  static Values&
+  getValues()
+  {
+    if (!values_)
+      values_ = new Values();
+
+    return *values_;
+  }
+
   ndn::ptr_lib::shared_ptr<Impl> impl_;
+  static Values* values_;
 };
 
 }
