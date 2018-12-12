@@ -111,6 +111,15 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
   (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
    uint64_t callbackId)
 {
+  if ((state == NamespaceState_INTEREST_TIMEOUT ||
+       state == NamespaceState_INTEREST_NETWORK_NACK) &&
+      &changedNamespace == latestNamespace_) {
+    // Timeout or network NACK, so try to fetch again.
+    latestNamespace_->getFace_()->callLater
+      (latestPacketFreshnessPeriod_, [=]{ latestNamespace_->objectNeeded(true); });
+    return;
+  }
+
   if (!(state == NamespaceState_OBJECT_READY &&
         changedNamespace.getName().size() ==
           latestNamespace_->getName().size() + 1 &&
