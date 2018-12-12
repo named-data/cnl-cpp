@@ -173,9 +173,6 @@ private:
     Impl(int pipelineSize,
          const OnSequencedGeneralizedObject& onSequencedGeneralizedObject);
 
-    GeneralizedObjectHandler&
-    getGeneralizedObjectHandler() { return generalizedObjectHandler_; }
-
     void
     setObject
       (int sequenceNumber, const ndn::Blob& object,

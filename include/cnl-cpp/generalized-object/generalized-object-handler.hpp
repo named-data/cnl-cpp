@@ -216,9 +216,6 @@ private:
     void
     onNamespaceSet(Namespace* nameSpace);
 
-    SegmentedObjectHandler&
-    getSegmentedObjectHandler() { return *segmentedObjectHandler_; }
-
     void
     setObject
       (Namespace& nameSpace, const ndn::Blob& object,
