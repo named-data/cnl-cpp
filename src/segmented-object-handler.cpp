@@ -92,7 +92,7 @@ SegmentedObjectHandler::Impl::setObject
   ptr_lib::shared_ptr<vector<uint8_t> > manifestContent;
   DigestSha256Signature digestSignature;
   if (useSignatureManifest) {
-    // Get ready to save the segment payload digests.
+    // Get ready to save the segment implicit digests.
     manifestContent.reset
       (new vector<uint8_t>((finalSegment + 1) * ndn_SHA256_DIGEST_SIZE));
     
@@ -120,7 +120,7 @@ SegmentedObjectHandler::Impl::setObject
     if (useSignatureManifest) {
       data->setSignature(digestSignature);
 
-      // Append the implicit to the manifestContent.
+      // Append the implicit digest to the manifestContent.
       const Blob& implicitDigest = (*data->getFullName())[-1].getValue();
       size_t digestOffset = segment * ndn_SHA256_DIGEST_SIZE;
       memcpy
