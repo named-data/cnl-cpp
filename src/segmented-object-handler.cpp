@@ -67,29 +67,29 @@ SegmentedObjectHandler::Impl::onSegment(Namespace* segmentNamespace)
     totalSize_ += segmentNamespace->getBlobObject().size();
   }
   else {
-      // Concatenate the segments.
-      ptr_lib::shared_ptr<vector<uint8_t> > content =
-        ptr_lib::make_shared<vector<uint8_t> >(totalSize_);
-      size_t offset = 0;
-      for (size_t i = 0; i < segments_.size(); ++i) {
-        const Blob& segment = segments_[i];
-        memcpy(&(*content)[offset], segment.buf(), segment.size());
-        offset += segment.size();
-        // Free the memory.
-        segments_[i] = Blob();
-      }
+    // Concatenate the segments.
+    ptr_lib::shared_ptr<vector<uint8_t> > content =
+      ptr_lib::make_shared<vector<uint8_t> >(totalSize_);
+    size_t offset = 0;
+    for (size_t i = 0; i < segments_.size(); ++i) {
+      const Blob& segment = segments_[i];
+      memcpy(&(*content)[offset], segment.buf(), segment.size());
+      offset += segment.size();
+      // Free the memory.
+      segments_[i] = Blob();
+    }
 
-      // Free resources that won't be used anymore.
-      // The OnSegment callback was already removed by the SegmentStreamHandler.
-      segments_.clear();
+    // Free resources that won't be used anymore.
+    // The OnSegment callback was already removed by the SegmentStreamHandler.
+    segments_.clear();
 
-      // Deserialize and fire the onSegmentedObject callbacks when done.
-      auto onObjectSet = [&](Namespace& objectNamespace) {
-        fireOnSegmentedObject(*namespace_);
-        // We only fire the callbacks once, so free the resources.
-        onSegmentedObjectCallbacks_.clear();
-      };
-      namespace_->deserialize_(Blob(content, false), onObjectSet);
+    // Deserialize and fire the onSegmentedObject callbacks when done.
+    auto onObjectSet = [&] (Namespace& objectNamespace) {
+      fireOnSegmentedObject(*namespace_);
+      // We only fire the callbacks once, so free the resources.
+      onSegmentedObjectCallbacks_.clear();
+    };
+    namespace_->deserialize_(Blob(content, false), onObjectSet);
   }
 }
 
