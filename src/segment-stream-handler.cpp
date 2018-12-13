@@ -99,7 +99,7 @@ SegmentStreamHandler::Impl::setObject
 {
   KeyChain* keyChain = nameSpace.getKeyChain_();
   if (!keyChain)
-    throw runtime_error("SegmentedObjectHandler.setObject: There is no KeyChain");
+    throw runtime_error("SegmentStreamHandler.setObject: There is no KeyChain");
 
   // Get the final block ID.
   uint64_t finalSegment = 0;
@@ -165,6 +165,31 @@ SegmentStreamHandler::Impl::setObject
 
   // TODO: Do this in a canSerialize callback from Namespace.serializeObject?
   nameSpace.setObject_(ptr_lib::make_shared<BlobObject>(object));
+}
+
+bool
+SegmentStreamHandler::Impl::verifyWithManifest(Namespace& nameSpace)
+{
+  Blob manifestContent = nameSpace[getNAME_COMPONENT_MANIFEST()].getBlobObject();
+  size_t nSegments = manifestContent.size() / ndn_SHA256_DIGEST_SIZE;
+  if (manifestContent.size() != nSegments * ndn_SHA256_DIGEST_SIZE)
+    // The manifest size is not a multiple of the digest size as expected.
+    return false;
+
+  for (size_t segment = 0; segment < nSegments; ++segment) {
+    Namespace& segmentNamespace = nameSpace[Name::Component::fromSegment(segment)];
+    const Blob& segmentDigest = (*segmentNamespace.getData()->getFullName())[-1].getValue();
+    if (segmentDigest.size() != ndn_SHA256_DIGEST_SIZE)
+      // We don't expect this.
+      return false;
+    // To avoid copying, use memcmp directly instead of making a Blob.
+    if (memcmp(segmentDigest.buf(),
+               manifestContent.buf() + segment * ndn_SHA256_DIGEST_SIZE,
+               ndn_SHA256_DIGEST_SIZE) != 0)
+      return false;
+  }
+
+  return true;
 }
 
 void

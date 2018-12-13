@@ -167,6 +167,18 @@ public:
     impl_->setObject(nameSpace, object, useSignatureManifest);
   }
 
+  /**
+   * Get the list of implicit digests from the _manifest packet and use it to
+   * verify the segment implicit digests.
+   * @param nameSpace The Namespace with child _manifest and segments.
+   * @return True if the segment digests verify, false if not.
+   */
+  static bool
+  verifyWithManifest(Namespace& nameSpace)
+  {
+    return Impl::verifyWithManifest(nameSpace);
+  }
+
   static const ndn::Name::Component&
   getNAME_COMPONENT_MANIFEST() { return getValues().NAME_COMPONENT_MANIFEST; }
 
@@ -215,6 +227,9 @@ private:
     void
     setObject
       (Namespace& nameSpace, const ndn::Blob& object, bool useSignatureManifest);
+
+    static bool
+    verifyWithManifest(Namespace& nameSpace);
 
     void
     onNamespaceSet(Namespace* nameSpace);
