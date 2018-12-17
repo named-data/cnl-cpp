@@ -610,6 +610,15 @@ public:
   ndn::KeyChain*
   getKeyChain_() { return impl_->getKeyChain_(); }
 
+  /**
+   * Get the new data MetaInfo that was set on this or a parent node.
+   * @return The new data MetaInfo, or null if not set on this or any parent.
+   * This method name has an underscore because is normally only called from a
+   * Handler, not from the application.
+   */
+  const ndn::MetaInfo*
+  getNewDataMetaInfo_() { return impl_->getNewDataMetaInfo_(); }
+
   void
   setObject_(const ndn::ptr_lib::shared_ptr<Object>& object)
   {
@@ -758,6 +767,9 @@ public:
     ndn::Face*
     getFace_();
 
+    const ndn::MetaInfo*
+    getNewDataMetaInfo_();
+
     void
     deserialize_
       (const ndn::Blob& blob, 
@@ -778,13 +790,6 @@ public:
      */
     ndn::Milliseconds
     getMaxInterestLifetime();
-
-    /**
-     * Get the new data MetaInfo that was set on this or a parent node.
-     * @return The new data MetaInfo, or null if not set on this or any parent.
-     */
-    const ndn::MetaInfo*
-    getNewDataMetaInfo();
 
     /**
      * Get the decryptor set by setDecryptor on this or a parent Namespace node.

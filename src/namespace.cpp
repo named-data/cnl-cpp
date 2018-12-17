@@ -171,7 +171,7 @@ Namespace::Impl::serializeObject(const ptr_lib::shared_ptr<Object>& object)
   // Prepare the Data packet.
   ptr_lib::shared_ptr<Data> data = ptr_lib::make_shared<Data>(name_);
   data->setContent(blobObject->getBlob());
-  const MetaInfo* metaInfo = getNewDataMetaInfo();
+  const MetaInfo* metaInfo = getNewDataMetaInfo_();
   if (metaInfo)
     data->setMetaInfo(*metaInfo);
 
@@ -392,7 +392,7 @@ Namespace::Impl::getMaxInterestLifetime()
 }
 
 const MetaInfo*
-Namespace::Impl::getNewDataMetaInfo()
+Namespace::Impl::getNewDataMetaInfo_()
 {
   Namespace* nameSpace = &outerNamespace_;
   while (nameSpace) {
