@@ -251,6 +251,8 @@ private:
     int pipelineSize_;
     ndn::Milliseconds latestPacketFreshnessPeriod_;
     GeneralizedObjectHandler generalizedObjectHandler_;
+    int nRequestedSequenceNumbers_;
+    int nReportedSequenceNumbers_;
     int maxReportedSequenceNumber_;
   };
 

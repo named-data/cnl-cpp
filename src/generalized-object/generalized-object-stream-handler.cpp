@@ -38,7 +38,8 @@ GeneralizedObjectStreamHandler::Impl::Impl
 : pipelineSize_(pipelineSize),
   onSequencedGeneralizedObject_(onSequencedGeneralizedObject), namespace_(0),
   latestNamespace_(0), producedSequenceNumber_(-1),
-  latestPacketFreshnessPeriod_(1000.0), maxReportedSequenceNumber_(-1)
+  latestPacketFreshnessPeriod_(1000.0), nRequestedSequenceNumbers_(0),
+  nReportedSequenceNumbers_(0), maxReportedSequenceNumber_(-1)
 {
   if (pipelineSize_ < 0)
     pipelineSize_ = 0;
@@ -194,6 +195,7 @@ GeneralizedObjectStreamHandler::Impl::onGeneralizedObject
     }
   }
 
+  ++nReportedSequenceNumbers_;
   if (sequenceNumber > maxReportedSequenceNumber_)
     maxReportedSequenceNumber_ = sequenceNumber;
 
@@ -207,31 +209,12 @@ GeneralizedObjectStreamHandler::Impl::requestNewSequenceNumbers()
 {
   ptr_lib::shared_ptr<vector<Name::Component>> childComponents =
     namespace_->getChildComponents();
-  // First, count how many are already requested and not received.
-  int nRequestedSequenceNumbers = 0;
-  // Debug: Track the max requested (and don't search all children).
-  for (vector<Name::Component>::iterator component = childComponents->begin();
-       component != childComponents->end(); ++component) {
-    if (!component->isSequenceNumber())
-      // The namespace contains a child other than a sequence number. Ignore.
-      continue;
-
-    // TODO: Should the child sequence be set to INTEREST_EXPRESSED along with _meta?
-    Namespace& metaChild =
-      (*namespace_)[*component]
-                   [GeneralizedObjectHandler::getNAME_COMPONENT_META()];
-    if (!metaChild.getData() &&
-        metaChild.getState() >= NamespaceState_INTEREST_EXPRESSED) {
-      ++nRequestedSequenceNumbers;
-      if (nRequestedSequenceNumbers >= pipelineSize_)
-        // Already maxed out on requests.
-        break;
-    }
-  }
+  int nOutstandingSequenceNumbers = 
+    nRequestedSequenceNumbers_ - nReportedSequenceNumbers_;
 
   // Now find unrequested sequence numbers and request.
   int sequenceNumber = maxReportedSequenceNumber_;
-  while (nRequestedSequenceNumbers < pipelineSize_) {
+  while (nOutstandingSequenceNumbers < pipelineSize_) {
     ++sequenceNumber;
     Namespace& sequenceNamespace =
       (*namespace_)[Name::Component::fromSequenceNumber(sequenceNumber)];
@@ -242,7 +225,9 @@ GeneralizedObjectStreamHandler::Impl::requestNewSequenceNumbers()
       // Already got the data packet or already requested.
       continue;
 
-    ++nRequestedSequenceNumbers;
+    ++nOutstandingSequenceNumbers;
+    ++nRequestedSequenceNumbers_;
+
     // Debug: Do we have to attach a new handler for each sequence number?
     ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
       ptr_lib::make_shared<GeneralizedObjectHandler>
