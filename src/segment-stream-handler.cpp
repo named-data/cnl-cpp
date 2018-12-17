@@ -137,6 +137,11 @@ SegmentStreamHandler::Impl::setObject
     Namespace& segmentNamespace = nameSpace[Name::Component::fromSegment(segment)];
     ptr_lib::shared_ptr<Data> data =
       ptr_lib::make_shared<Data>(segmentNamespace.getName());
+
+    const MetaInfo* metaInfo = nameSpace.getNewDataMetaInfo_();
+    if (metaInfo)
+      // Start with a copy of the provided MetaInfo.
+      data->setMetaInfo(*metaInfo);
     data->getMetaInfo().setFinalBlockId(finalBlockId);
     data->setContent(Blob(object.buf() + offset, payloadLength));
 
