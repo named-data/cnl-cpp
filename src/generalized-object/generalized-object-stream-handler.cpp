@@ -150,12 +150,17 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
 
     if (pipelineSize_ == 0) {
       // Fetch one generalized object.
-      ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
-        ptr_lib::make_shared<GeneralizedObjectHandler>
-          (bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
-                shared_from_this(), _1, _2, sequenceNumber));
-      targetNamespace.setHandler(generalizedObjectHandler);
-      targetNamespace[GeneralizedObjectHandler::getNAME_COMPONENT_META()].objectNeeded();
+      Namespace& sequenceMeta =
+        targetNamespace[GeneralizedObjectHandler::getNAME_COMPONENT_META()];
+      // Make sure we didn't already request it.
+      if (sequenceMeta.getState() < NamespaceState_INTEREST_EXPRESSED) {
+        ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
+          ptr_lib::make_shared<GeneralizedObjectHandler>
+            (bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
+                  shared_from_this(), _1, _2, sequenceNumber));
+        targetNamespace.setHandler(generalizedObjectHandler);
+        sequenceMeta.objectNeeded();
+      }
     }
     else {
       // Fetch by continuously filling the Interest pipeline.
