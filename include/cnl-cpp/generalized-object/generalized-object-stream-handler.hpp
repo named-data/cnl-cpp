@@ -252,6 +252,7 @@ private:
     ndn::Milliseconds latestPacketFreshnessPeriod_;
     GeneralizedObjectHandler generalizedObjectHandler_;
     int nRequestedSequenceNumbers_;
+    int maxRequestedSequenceNumber_;
     int nReportedSequenceNumbers_;
     int maxReportedSequenceNumber_;
   };

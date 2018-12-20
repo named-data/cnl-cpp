@@ -39,7 +39,8 @@ GeneralizedObjectStreamHandler::Impl::Impl
   onSequencedGeneralizedObject_(onSequencedGeneralizedObject), namespace_(0),
   latestNamespace_(0), producedSequenceNumber_(-1),
   latestPacketFreshnessPeriod_(1000.0), nRequestedSequenceNumbers_(0),
-  nReportedSequenceNumbers_(0), maxReportedSequenceNumber_(-1)
+  maxRequestedSequenceNumber_(0), nReportedSequenceNumbers_(0),
+  maxReportedSequenceNumber_(-1)
 {
   if (pipelineSize_ < 0)
     pipelineSize_ = 0;
@@ -112,13 +113,26 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
   (Namespace& nameSpace, Namespace& changedNamespace, NamespaceState state,
    uint64_t callbackId)
 {
-  if ((state == NamespaceState_INTEREST_TIMEOUT ||
-       state == NamespaceState_INTEREST_NETWORK_NACK) &&
-      &changedNamespace == latestNamespace_) {
-    // Timeout or network NACK, so try to fetch again.
-    latestNamespace_->getFace_()->callLater
-      (latestPacketFreshnessPeriod_, [=]{ latestNamespace_->objectNeeded(true); });
-    return;
+  if (state == NamespaceState_INTEREST_TIMEOUT ||
+      state == NamespaceState_INTEREST_NETWORK_NACK) {
+    if (&changedNamespace == latestNamespace_) {
+      // Timeout or network NACK, so try to fetch again.
+      latestNamespace_->getFace_()->callLater
+        (latestPacketFreshnessPeriod_, [=]{ latestNamespace_->objectNeeded(true); });
+      return;
+    }
+    else if (pipelineSize_ > 0 &&
+        changedNamespace.getName().size() == namespace_->getName().size() + 2 &&
+        changedNamespace.getName()[-1].equals
+          (GeneralizedObjectHandler::getNAME_COMPONENT_META()) &&
+        changedNamespace.getName()[-2].isSequenceNumber() &&
+        changedNamespace.getName()[-2].toSequenceNumber() ==
+          maxRequestedSequenceNumber_) {
+      // The highest pipelined request timed out, so request the _latest.
+      // TODO: Should we do this for the lowest requested?
+      latestNamespace_->objectNeeded(true);
+      return;
+    }
   }
 
   if (!(state == NamespaceState_OBJECT_READY &&
@@ -165,6 +179,8 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
     else {
       // Fetch by continuously filling the Interest pipeline.
       maxReportedSequenceNumber_ = sequenceNumber - 1;
+      // Reset the pipeline in case we are resuming after a timeout.
+      nRequestedSequenceNumbers_ = nReportedSequenceNumbers_;
       requestNewSequenceNumbers();
     }
   }
@@ -239,6 +255,8 @@ GeneralizedObjectStreamHandler::Impl::requestNewSequenceNumbers()
         (bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
               shared_from_this(), _1, _2, sequenceNumber));
     sequenceNamespace.setHandler(generalizedObjectHandler);
+    if (sequenceNumber > maxRequestedSequenceNumber_)
+      maxRequestedSequenceNumber_ = sequenceNumber;
     sequenceMeta.objectNeeded();
   }
 }
