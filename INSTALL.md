@@ -32,7 +32,7 @@ To configure on macOS, enter:
 
 To configure on other systems, enter:
 
-    ./configure CPPFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib
+    ./configure
 
 Enter:
 
