@@ -174,7 +174,7 @@ int main(int argc, char** argv)
         cout << "Register failed for prefix " << prefix->toUri() << endl;
       });
 
-    // Loop, producing a new object every previousPublishMs milliseconds (and
+    // Loop, producing a new object every publishIntervalMs milliseconds (and
     // also calling processEvents()).
     MillisecondsSince1970 previousPublishMs = 0;
     while (true) {
