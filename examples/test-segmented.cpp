@@ -34,6 +34,9 @@ using namespace ndn;
 int main(int argc, char** argv)
 {
   try {
+    // Silence the warning from Interest wire encode.
+    Interest::setDefaultCanBePrefix(true);
+
     Face face("memoria.ndn.ucla.edu");
     Namespace page
       ("/ndn/edu/ucla/remap/demo/ndn-js-test/named-data.net/project/ndn-ar2011.html/%FDT%F7n%9E");
