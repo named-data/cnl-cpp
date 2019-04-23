@@ -13,6 +13,7 @@ and update the build system, see Development Prerequisites.)
 * Optional: log4cxx (for debugging and log output in this and in NDN-CPP)
 * Optional: Doxygen (to make documentation)
 * Optional: Boost (min version 1.48) with asio (for ThreadsafeFace and async I/O in NDN-CPP)
+* Optional: zlib (for FullPSync2017)
 
 The steps to install the prerequisites are the same as to build and install NDN-CPP.
 Please see https://github.com/named-data/ndn-cpp/blob/master/INSTALL.md .
