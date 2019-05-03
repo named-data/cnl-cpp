@@ -23,7 +23,7 @@ pkgconfig_DATA = libcnl-cpp.pc
 noinst_PROGRAMS = bin/test-generalized-object-consumer \
   bin/test-generalized-object-producer bin/test-generalized-object-stream-consumer \
   bin/test-generalized-object-stream-producer bin/test-nac-consumer \
-  bin/test-nac-producer bin/test-segmented \
+  bin/test-nac-producer bin/test-segmented bin/test-sync \
   bin/test-versioned-generalized-object-consumer \
   bin/test-versioned-generalized-object-producer
 
@@ -70,6 +70,9 @@ bin_test_nac_producer_LDADD = libcnl-cpp.la
 
 bin_test_segmented_SOURCES = examples/test-segmented.cpp
 bin_test_segmented_LDADD = libcnl-cpp.la
+
+bin_test_sync_SOURCES = examples/test-sync.cpp
+bin_test_sync_LDADD = libcnl-cpp.la
 
 bin_test_versioned_generalized_object_consumer_SOURCES = examples/test-versioned-generalized-object-consumer.cpp
 bin_test_versioned_generalized_object_consumer_LDADD = libcnl-cpp.la

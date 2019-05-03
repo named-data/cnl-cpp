@@ -98,7 +98,7 @@ noinst_PROGRAMS = bin/test-generalized-object-consumer$(EXEEXT) \
 	bin/test-generalized-object-stream-consumer$(EXEEXT) \
 	bin/test-generalized-object-stream-producer$(EXEEXT) \
 	bin/test-nac-consumer$(EXEEXT) bin/test-nac-producer$(EXEEXT) \
-	bin/test-segmented$(EXEEXT) \
+	bin/test-segmented$(EXEEXT) bin/test-sync$(EXEEXT) \
 	bin/test-versioned-generalized-object-consumer$(EXEEXT) \
 	bin/test-versioned-generalized-object-producer$(EXEEXT)
 subdir = .
@@ -200,6 +200,9 @@ bin_test_nac_producer_DEPENDENCIES = libcnl-cpp.la
 am_bin_test_segmented_OBJECTS = examples/test-segmented.$(OBJEXT)
 bin_test_segmented_OBJECTS = $(am_bin_test_segmented_OBJECTS)
 bin_test_segmented_DEPENDENCIES = libcnl-cpp.la
+am_bin_test_sync_OBJECTS = examples/test-sync.$(OBJEXT)
+bin_test_sync_OBJECTS = $(am_bin_test_sync_OBJECTS)
+bin_test_sync_DEPENDENCIES = libcnl-cpp.la
 am_bin_test_versioned_generalized_object_consumer_OBJECTS =  \
 	examples/test-versioned-generalized-object-consumer.$(OBJEXT)
 bin_test_versioned_generalized_object_consumer_OBJECTS =  \
@@ -236,6 +239,7 @@ am__depfiles_remade =  \
 	examples/$(DEPDIR)/test-nac-consumer.Po \
 	examples/$(DEPDIR)/test-nac-producer.Po \
 	examples/$(DEPDIR)/test-segmented.Po \
+	examples/$(DEPDIR)/test-sync.Po \
 	examples/$(DEPDIR)/test-versioned-generalized-object-consumer.Po \
 	examples/$(DEPDIR)/test-versioned-generalized-object-producer.Po \
 	src/$(DEPDIR)/namespace.Plo src/$(DEPDIR)/object.Plo \
@@ -288,6 +292,7 @@ SOURCES = $(libcnl_cpp_la_SOURCES) \
 	$(bin_test_generalized_object_stream_producer_SOURCES) \
 	$(bin_test_nac_consumer_SOURCES) \
 	$(bin_test_nac_producer_SOURCES) $(bin_test_segmented_SOURCES) \
+	$(bin_test_sync_SOURCES) \
 	$(bin_test_versioned_generalized_object_consumer_SOURCES) \
 	$(bin_test_versioned_generalized_object_producer_SOURCES)
 DIST_SOURCES = $(libcnl_cpp_la_SOURCES) \
@@ -297,6 +302,7 @@ DIST_SOURCES = $(libcnl_cpp_la_SOURCES) \
 	$(bin_test_generalized_object_stream_producer_SOURCES) \
 	$(bin_test_nac_consumer_SOURCES) \
 	$(bin_test_nac_producer_SOURCES) $(bin_test_segmented_SOURCES) \
+	$(bin_test_sync_SOURCES) \
 	$(bin_test_versioned_generalized_object_consumer_SOURCES) \
 	$(bin_test_versioned_generalized_object_producer_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
@@ -621,6 +627,8 @@ bin_test_nac_producer_SOURCES = examples/test-nac-producer.cpp
 bin_test_nac_producer_LDADD = libcnl-cpp.la
 bin_test_segmented_SOURCES = examples/test-segmented.cpp
 bin_test_segmented_LDADD = libcnl-cpp.la
+bin_test_sync_SOURCES = examples/test-sync.cpp
+bin_test_sync_LDADD = libcnl-cpp.la
 bin_test_versioned_generalized_object_consumer_SOURCES = examples/test-versioned-generalized-object-consumer.cpp
 bin_test_versioned_generalized_object_consumer_LDADD = libcnl-cpp.la
 bin_test_versioned_generalized_object_producer_SOURCES = examples/test-versioned-generalized-object-producer.cpp
@@ -796,6 +804,12 @@ examples/test-segmented.$(OBJEXT): examples/$(am__dirstamp) \
 bin/test-segmented$(EXEEXT): $(bin_test_segmented_OBJECTS) $(bin_test_segmented_DEPENDENCIES) $(EXTRA_bin_test_segmented_DEPENDENCIES) bin/$(am__dirstamp)
 	@rm -f bin/test-segmented$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(bin_test_segmented_OBJECTS) $(bin_test_segmented_LDADD) $(LIBS)
+examples/test-sync.$(OBJEXT): examples/$(am__dirstamp) \
+	examples/$(DEPDIR)/$(am__dirstamp)
+
+bin/test-sync$(EXEEXT): $(bin_test_sync_OBJECTS) $(bin_test_sync_DEPENDENCIES) $(EXTRA_bin_test_sync_DEPENDENCIES) bin/$(am__dirstamp)
+	@rm -f bin/test-sync$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(bin_test_sync_OBJECTS) $(bin_test_sync_LDADD) $(LIBS)
 examples/test-versioned-generalized-object-consumer.$(OBJEXT):  \
 	examples/$(am__dirstamp) examples/$(DEPDIR)/$(am__dirstamp)
 
@@ -829,6 +843,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-consumer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-nac-producer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-segmented.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-sync.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-versioned-generalized-object-consumer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@examples/$(DEPDIR)/test-versioned-generalized-object-producer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/namespace.Plo@am__quote@ # am--include-marker
@@ -1261,6 +1276,7 @@ distclean: distclean-recursive
 	-rm -f examples/$(DEPDIR)/test-nac-consumer.Po
 	-rm -f examples/$(DEPDIR)/test-nac-producer.Po
 	-rm -f examples/$(DEPDIR)/test-segmented.Po
+	-rm -f examples/$(DEPDIR)/test-sync.Po
 	-rm -f examples/$(DEPDIR)/test-versioned-generalized-object-consumer.Po
 	-rm -f examples/$(DEPDIR)/test-versioned-generalized-object-producer.Po
 	-rm -f src/$(DEPDIR)/namespace.Plo
@@ -1324,6 +1340,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f examples/$(DEPDIR)/test-nac-consumer.Po
 	-rm -f examples/$(DEPDIR)/test-nac-producer.Po
 	-rm -f examples/$(DEPDIR)/test-segmented.Po
+	-rm -f examples/$(DEPDIR)/test-sync.Po
 	-rm -f examples/$(DEPDIR)/test-versioned-generalized-object-consumer.Po
 	-rm -f examples/$(DEPDIR)/test-versioned-generalized-object-producer.Po
 	-rm -f src/$(DEPDIR)/namespace.Plo
