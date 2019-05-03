@@ -30,6 +30,7 @@
 
 #include <ndn-cpp/security/v2/validation-error.hpp>
 #include <ndn-cpp/encrypt/decryptor-v2.hpp>
+#include <ndn-cpp/sync/full-psync2017.hpp>
 #include "blob-object.hpp"
 
 namespace cnl_cpp {
@@ -511,6 +512,17 @@ public:
   }
 
   /**
+   * Enable announcing added names and receiving announced names from other
+   * users in the sync group.
+   * @param depth (optional) The depth starting from this node to announce new
+   * names. If enableSync has already been called on a parent node, then this
+   * overrides the depth starting from this node and children of this node. If
+   * omitted, use unlimited depth.
+   */
+  void
+  enableSync(int depth = 30000) { impl_->enableSync(depth); }
+
+  /**
    * Set the MetaInfo to use when creating a new Data packet at this or child
    * nodes. If a MetaInfo already exists at this node, it is replaced.
    * @param metaInfo The MetaInfo object, which is copied.
@@ -738,6 +750,9 @@ public:
     setKeyChain(ndn::KeyChain* keyChain) { keyChain_ = keyChain; }
 
     void
+    enableSync(int depth);
+
+    void
     setNewDataMetaInfo(const ndn::MetaInfo& metaInfo)
     {
       newDataMetaInfo_ = ndn::ptr_lib::make_shared<ndn::MetaInfo>(metaInfo);
@@ -748,6 +763,13 @@ public:
 
     ndn::KeyChain*
     getKeyChain_();
+
+    /**
+     * Get this or a parent Namespace node that has been enabled with enableSync.
+     * @return The sync-enabled node, or null if not set on this or any parent.
+     */
+    Namespace*
+    getSyncNode();
 
     Namespace&
     setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler);
@@ -897,6 +919,16 @@ public:
     onDecryptionError
       (ndn::EncryptError::ErrorCode errorCode, const std::string& message);
 
+    /**
+     * This is called on the root Namespace node when Full PSync reports updates.
+     * For each new name, create the Namespace node if needed (which will fire
+     * OnStateChanged with NAME_EXISTS). However, if the the name of the root
+     * Namespace node is not a prefix of the name, don't add it.
+     * @param names The set of new Names.
+     */
+    void
+    onNamesUpdate(const ndn::ptr_lib::shared_ptr<std::vector<ndn::Name>>& names);
+
     Namespace& outerNamespace_;
     ndn::Name name_;
     // parent_ and root_ may be updated by createChild.
@@ -927,7 +959,10 @@ public:
     // setFace will create this in the root Namespace node.
     ndn::ptr_lib::shared_ptr<PendingIncomingInterestTable>
       pendingIncomingInterestTable_;
+    // This will be created in the root Namespace node.
+    ndn::ptr_lib::shared_ptr<ndn::FullPSync2017> fullPSync_;
     ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
+    int syncDepth_; // -1 if not specified.
   };
 
 private:

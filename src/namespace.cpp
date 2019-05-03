@@ -71,7 +71,7 @@ Namespace::Impl::Impl
   root_(&outerNamespace), state_(NamespaceState_NAME_EXISTS),
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), 
   freshnessExpiryTimeMilliseconds_(-1.0), face_(0), decryptor_(0),
-  maxInterestLifetime_(-1)
+  maxInterestLifetime_(-1), syncDepth_(-1)
 {
 }
 
@@ -276,6 +276,24 @@ Namespace::Impl::setFace
   }
 }
 
+void
+Namespace::Impl::enableSync(int depth)
+{
+  if (!root_->impl_->fullPSync_) {
+    Face* face = getFace_();
+    if (!face)
+      throw runtime_error("enableSync: You must first call setFace on this or a parent");
+
+    root_->impl_->fullPSync_ = ptr_lib::make_shared<FullPSync2017>
+      (275, *face, Name("/CNL-sync"),
+       bind(&Namespace::Impl::onNamesUpdate, shared_from_this(), _1),
+       *getKeyChain_(), 1600, 1600);
+  }
+
+  syncDepth_ = depth;
+  // Debug: Add existing leaf nodes.
+}
+
 Namespace&
 Namespace::Impl::setHandler(const ptr_lib::shared_ptr<Handler>& handler)
 {
@@ -377,6 +395,19 @@ Namespace::Impl::getKeyChain_()
   return 0;
 }
 
+Namespace*
+Namespace::Impl::getSyncNode()
+{
+  Namespace* nameSpace = &outerNamespace_;
+  while (nameSpace) {
+    if (nameSpace->impl_->syncDepth_ >= 0)
+      return nameSpace;
+    nameSpace = nameSpace->impl_->parent_;
+  }
+
+  return 0;
+}
+
 Milliseconds
 Namespace::Impl::getMaxInterestLifetime()
 {
@@ -452,8 +483,23 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
   child->impl_->root_ = root_;
   children_[component] = child;
 
-  if (fireCallbacks)
+  if (fireCallbacks) {
     child->impl_->setState(NamespaceState_NAME_EXISTS);
+    
+    // Sync this name under the same conditions that we report a NAME_EXISTS.
+    if (root_->impl_->fullPSync_) {
+      Namespace* syncNode = child->impl_->getSyncNode();
+      if (syncNode) {
+        // Only sync names to the specified depth.
+        int depth = child->impl_->name_.size() - syncNode->impl_->name_.size();
+
+        if (depth <= syncNode->impl_->syncDepth_)
+          // If createChild is called when onNamesUpdate receives a name from
+          //   fullPSync_, then publishName already has it and will ignore it.
+          root_->impl_->fullPSync_->publishName(child->impl_->name_);
+      }
+    }
+  }
 
   return *child;
 }
@@ -734,6 +780,23 @@ Namespace::Impl::onDecryptionError
   decryptionErrorText << "Decryptor error " << errorCode << ": " + message;
   decryptionError_ = decryptionErrorText.str();
   setState(NamespaceState_DECRYPTION_ERROR);
+}
+
+void
+Namespace::Impl::onNamesUpdate
+  (const ptr_lib::shared_ptr<std::vector<Name>>& names)
+{
+  for (vector<Name>::const_iterator name = names->begin(); name != names->end();
+       ++name) {
+    if (!name_.isPrefixOf(*name)) {
+      _LOG_DEBUG("The Namespace root name is not a prefix of the sync update name " <<
+                 *name);
+      continue;
+    }
+
+    // This will create the name if it doesn't exist.
+    getChild(*name);
+  }
 }
 
 #ifdef NDN_CPP_HAVE_BOOST_ASIO
