@@ -91,13 +91,17 @@ public:
   class Impl;
 
   /**
-   * Namespace::Handler is a base class for handler classes. See setHandler for
-   * details.
+   * Namespace::Handler is a base class for Handler classes.
    */
   class Handler {
   public:
     typedef ndn::func_lib::function<void
       (const ndn::ptr_lib::shared_ptr<Object>& object)> OnDeserialized;
+
+    typedef ndn::func_lib::function<bool
+      (Namespace& blobNamespace, const ndn::Blob& blob,
+       const OnDeserialized& onDeserialized,
+       uint64_t callbackId)> OnDeserializeNeeded;
 
     typedef ndn::func_lib::function<void(Namespace& objectNamespace)> OnObjectSet;
 
@@ -124,25 +128,6 @@ public:
      */
     Namespace&
     getNamespace() { return *namespace_; }
-
-    /**
-     * An internal method to check if this Handler can deserialize the blob in
-     * order to set the object for the blobNamespace. This should only be
-     * called by the Namespace class. This base implementation just returns
-     * false. The subclass can override.
-     * @param blobNamespace The Namespace node which needs its Blob
-     * deserialized to an object.
-     * @param blob The serialized bytes to deserialize.
-     * @param onDeserialized If the Handler can deserialize, it should return
-     * true and eventually call onDeserialized(object) with the deserialized
-     * object.
-     * @return True if this Handler can deserialize and will call
-     * onDeserialized, otherwise false.
-     */
-    virtual bool
-    canDeserialize
-      (Namespace& blobNamespace, const ndn::Blob& blob,
-       const OnDeserialized& onDeserialized);
 
   protected:
     /**
@@ -586,8 +571,30 @@ public:
   getNextCallbackId();
 
   /**
-   * If canDeserialize on the Handler of this or a parent Namespace node
-   * returns true, set the state to DESERIALIZING and wait for the Handler to
+   * Add an onDeserializeNeeded callback. See deserialize_ for details. This
+   * method name has an underscore because is normally only called from a
+   * Handler, not from the application.
+   * @param onDeserializeNeeded This calls
+   * onDeserializeNeeded(blobNamespace, blob, onDeserialized, callbackId) where
+   * blobNamespace is the Namespace node which needs its Blob deserialized to an
+   * object, blob is the Blob with the serialized bytes to deserialize,
+   * onDeserialized is the callback to call with the deserialized object, and
+   * callbackId is the callback ID returned by this method. If a Handler can
+   * deserialize the blob for the blobNamespace, then onDeserializeNeeded should
+   * return true and eventually call onDeserialized(object) where object is the
+   * deserialized object. If the Handler cannot deserialize the blob then
+   * onDeserializeNeeded should return false.
+   * @return The callback ID which you can use in removeCallback().
+   */
+  uint64_t
+  addOnDeserializeNeeded_(const Handler::OnDeserializeNeeded& onDeserializeNeeded)
+  {
+    return impl_->addOnDeserializeNeeded_(onDeserializeNeeded);
+  }
+
+  /**
+   * If an OnDeserializeNeeded callback of this or a parent Namespace node
+   * returns true, set the state to DESERIALIZING and wait for the callback to
    * call the given onDeserialized. Otherwise, just call defaultOnDeserialized
    * immediately, which sets the object and sets the state to OBJECT_READY. This 
    * method name has an underscore because is normally only called from a
@@ -792,6 +799,9 @@ public:
     const ndn::MetaInfo*
     getNewDataMetaInfo_();
 
+    uint64_t
+    addOnDeserializeNeeded_(const Handler::OnDeserializeNeeded& onDeserializeNeeded);
+
     void
     deserialize_
       (const ndn::Blob& blob, 
@@ -861,6 +871,11 @@ public:
 
     bool
     fireOnObjectNeeded(Namespace& neededNamespace);
+
+    bool
+    fireOnDeserializeNeeded
+      (Namespace& blobNamespace, const ndn::Blob& blob,
+       const Handler::OnObjectSet& onObjectSet);
 
     /**
      * Set object_ to the given value, set the state to OBJECT_READY, and fire
@@ -956,6 +971,8 @@ public:
     std::map<uint64_t, OnValidateStateChanged> onValidateStateChangedCallbacks_;
     // The key is the callback ID. The value is the OnObjectNeeded function.
     std::map<uint64_t, OnObjectNeeded> onObjectNeededCallbacks_;
+    // The key is the callback ID. The value is the OnDeserializeNeeded function.
+    std::map<uint64_t, Handler::OnDeserializeNeeded> onDeserializeNeededCallbacks_;
     // setFace will create this in the root Namespace node.
     ndn::ptr_lib::shared_ptr<PendingIncomingInterestTable>
       pendingIncomingInterestTable_;

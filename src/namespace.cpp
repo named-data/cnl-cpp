@@ -45,14 +45,6 @@ Namespace::Handler::setNamespace(Namespace* nameSpace)
   return *this;
 }
 
-bool
-Namespace::Handler::canDeserialize
-  (Namespace& blobNamespace, const Blob& blob,
-   const OnDeserialized& onDeserialized)
-{
-  return false;
-}
-
 void
 Namespace::Handler::onNamespaceSet()
 {
@@ -448,21 +440,26 @@ Namespace::Impl::getDecryptor()
   return 0;
 }
 
+uint64_t
+Namespace::Impl::addOnDeserializeNeeded_
+  (const Handler::OnDeserializeNeeded& onDeserializeNeeded)
+{
+  uint64_t callbackId = getNextCallbackId();
+  onDeserializeNeededCallbacks_[callbackId] = onDeserializeNeeded;
+  return callbackId;
+}
+
 void
 Namespace::Impl::deserialize_
   (const Blob& blob, const Handler::OnObjectSet& onObjectSet)
 {
   Namespace* nameSpace = &outerNamespace_;
   while (nameSpace) {
-    if (nameSpace->impl_->handler_) {
-      if (nameSpace->impl_->handler_->canDeserialize
-          (outerNamespace_, blob,
-           bind(&Namespace::Impl::defaultOnDeserialized, shared_from_this(), 
-                _1, onObjectSet))) {
-        // Wait for the Handler to set the object.
-        setState(NamespaceState_DESERIALIZING);
-        return;
-      }
+    if (nameSpace->impl_->fireOnDeserializeNeeded
+        (outerNamespace_, blob, onObjectSet)) {
+      // Wait for the Handler to set the object.
+      setState(NamespaceState_DESERIALIZING);
+      return;
     }
 
     nameSpace = nameSpace->impl_->parent_;
@@ -619,6 +616,42 @@ Namespace::Impl::fireOnObjectNeeded(Namespace& neededNamespace)
   }
 
   return canProduce;
+}
+
+bool
+Namespace::Impl::fireOnDeserializeNeeded
+  (Namespace& blobNamespace, const ndn::Blob& blob,
+   const Handler::OnObjectSet& onObjectSet)
+{
+  Handler::OnDeserialized onDeserialized =
+    bind(&Namespace::Impl::defaultOnDeserialized, shared_from_this(),
+         _1, onObjectSet);
+
+  // Copy the keys before iterating since callbacks can change the list.
+  vector<uint64_t> keys;
+  keys.reserve(onDeserializeNeededCallbacks_.size());
+  for (map<uint64_t, Handler::OnDeserializeNeeded>::iterator i = onDeserializeNeededCallbacks_.begin();
+       i != onDeserializeNeededCallbacks_.end(); ++i)
+    keys.push_back(i->first);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    // A callback on a previous pass may have removed this callback, so check.
+    map<uint64_t, Handler::OnDeserializeNeeded>::iterator entry =
+      onDeserializeNeededCallbacks_.find(keys[i]);
+    if (entry != onDeserializeNeededCallbacks_.end()) {
+      try {
+        if (entry->second(blobNamespace, blob, onDeserialized, entry->first))
+          return true;
+      } catch (const std::exception& ex) {
+        _LOG_ERROR("Namespace::fireOnDeserializeNeeded: Error in onDeserializeNeeded: " <<
+                   ex.what());
+      } catch (...) {
+        _LOG_ERROR("Namespace::fireOnDeserializeNeeded: Error in onDeserializeNeeded.");
+      }
+    }
+  }
+
+  return false;
 }
 
 void
