@@ -40,7 +40,8 @@ GeneralizedObjectHandler::Impl::Impl(const OnGeneralizedObject& onGeneralizedObj
   segmentedObjectHandler_(ptr_lib::make_shared<SegmentedObjectHandler>()),
   // We'll call onGeneralizedObject if we don't use the SegmentedObjectHandler.
   onGeneralizedObject_(onGeneralizedObject), namespace_(0),
-  nComponentsAfterObjectNamespace_(0), onObjectNeededId_(0)
+  nComponentsAfterObjectNamespace_(0), onObjectNeededId_(0),
+  onDeserializeNeededId_(0)
 {
 }
 
@@ -88,7 +89,11 @@ GeneralizedObjectHandler::Impl::onNamespaceSet(Namespace* nameSpace)
   namespace_ = nameSpace;
 
   onObjectNeededId_ = namespace_->addOnObjectNeeded
-    (bind(&GeneralizedObjectHandler::Impl::onObjectNeeded, shared_from_this(), _1, _2, _3));
+    (bind(&GeneralizedObjectHandler::Impl::onObjectNeeded, shared_from_this(),
+          _1, _2, _3));
+  onDeserializeNeededId_ = namespace_->addOnDeserializeNeeded_
+    (bind(&GeneralizedObjectHandler::Impl::onDeserializeNeeded, shared_from_this(),
+          _1, _2, _3, _4));
   // We don't attach the SegmentedObjectHandler until we need it.
 }
 
@@ -105,17 +110,15 @@ GeneralizedObjectHandler::Impl::onObjectNeeded
     // on the _meta child below).
     return false;
 
-  // Remove the unused resource.
-  namespace_->removeCallback(onObjectNeededId_);
-
   (*namespace_)[getNAME_COMPONENT_META()].objectNeeded();
   return true;
 }
 
 bool
-GeneralizedObjectHandler::Impl::canDeserialize
+GeneralizedObjectHandler::Impl::onDeserializeNeeded
   (Namespace& blobNamespace, const Blob& blob,
-   const OnDeserialized& onDeserialized)
+   const Namespace::Handler::OnDeserialized& onDeserialized,
+   uint64_t callbackId)
 {
   if (blobNamespace.getName().size() !=
       namespace_->getName().size() + nComponentsAfterObjectNamespace_ + 1)
@@ -163,6 +166,10 @@ GeneralizedObjectHandler::Impl::canDeserialize
       (contentMetaInfo->getOther(),
        bind(&GeneralizedObjectHandler::Impl::onSegmentedObject,
        shared_from_this(), _1, contentMetaInfo));
+
+  // Remove callbacks to detach this from the Namespace.
+  namespace_->removeCallback(onObjectNeededId_);
+  namespace_->removeCallback(onDeserializeNeededId_);
 
   return true;
 }

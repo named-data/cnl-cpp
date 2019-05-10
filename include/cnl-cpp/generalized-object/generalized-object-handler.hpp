@@ -180,18 +180,6 @@ public:
   static const ndn::Name::Component&
   getNAME_COMPONENT_META() { return getValues().NAME_COMPONENT_META; }
 
-  /**
-   * This is called by Namespace when a packet is received. If this is the
-   * _meta packet, then decode it.
-   */
-  virtual bool
-  canDeserialize
-    (Namespace& blobNamespace, const ndn::Blob& blob,
-     const OnDeserialized& onDeserialized)
-  {
-    return impl_->canDeserialize(blobNamespace, blob, onDeserialized);
-  }
-
 protected:
   virtual void
   onNamespaceSet() { impl_->onNamespaceSet(&getNamespace()); }
@@ -263,11 +251,6 @@ private:
       segmentedObjectHandler_->setMaxSegmentPayloadLength(maxSegmentPayloadLength);
     }
 
-    bool
-    canDeserialize
-      (Namespace& blobNamespace, const ndn::Blob& blob,
-       const OnDeserialized& onDeserialized);
-
   private:
     bool
     onObjectNeeded
@@ -283,11 +266,22 @@ private:
       (Namespace& objectNamespace,
        const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo);
 
+    /**
+     * This is called by Namespace when a packet is received. If this is the
+     * _meta packet, then decode it.
+     */
+    bool
+    onDeserializeNeeded
+      (Namespace& blobNamespace, const ndn::Blob& blob,
+       const Namespace::Handler::OnDeserialized& onDeserialized,
+       uint64_t callbackId);
+
     ndn::ptr_lib::shared_ptr<SegmentedObjectHandler> segmentedObjectHandler_;
     OnGeneralizedObject onGeneralizedObject_;
     Namespace* namespace_;
     int nComponentsAfterObjectNamespace_;
     uint64_t onObjectNeededId_;
+    uint64_t onDeserializeNeededId_;
   };
 
   /**
