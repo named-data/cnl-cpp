@@ -110,9 +110,7 @@ public:
     {}
 
     /**
-     * Set the Namespace that this handler is attached to. (This is
-     * automatically called when you call Namespace.setHandler.) This method
-     * does not attach this Handler to the Namespace.
+     * Set the Namespace that this handler is attached to.
      * @param nameSpace The Handler's Namespace.
      * @return This Handler so you can chain calls to update values.
      * @throws runtime_error if this Handler is already attached to a different
@@ -536,12 +534,6 @@ public:
     impl_->setDecryptor(decryptor);
   }
 
-  Namespace&
-  setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler)
-  {
-    return impl_->setHandler(handler);
-  }
-
   void
   objectNeeded(bool mustBeFresh = true) { impl_->objectNeeded(mustBeFresh); }
 
@@ -784,9 +776,6 @@ public:
     Namespace*
     getSyncNode();
 
-    Namespace&
-    setHandler(const ndn::ptr_lib::shared_ptr<Handler>& handler);
-
     void
     objectNeeded(bool mustBeFresh);
 
@@ -970,7 +959,6 @@ public:
     ndn::DecryptorV2* decryptor_;
     std::string decryptionError_;
     std::string signingError_;
-    ndn::ptr_lib::shared_ptr<Handler> handler_;
     // The key is the callback ID. The value is the OnStateChanged function.
     std::map<uint64_t, OnStateChanged> onStateChangedCallbacks_;
     // The key is the callback ID. The value is the OnValidateStateChanged function.

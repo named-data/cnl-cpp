@@ -295,24 +295,6 @@ Namespace::Impl::enableSync(int depth)
   // Debug: Add existing leaf nodes.
 }
 
-Namespace&
-Namespace::Impl::setHandler(const ptr_lib::shared_ptr<Handler>& handler)
-{
-  if (!handler) {
-    // Clear the Handler.
-    handler_.reset();
-    return outerNamespace_;
-  }
-
-  if (handler_)
-    // TODO: Should we try to chain handlers?
-    throw runtime_error("This Namespace node already has a handler");
-
-  handler->setNamespace(&outerNamespace_);
-  handler_ = handler;
-  return outerNamespace_;
-}
-
 void
 Namespace::Impl::objectNeeded(bool mustBeFresh)
 {

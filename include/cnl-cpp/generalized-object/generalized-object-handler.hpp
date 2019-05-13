@@ -68,9 +68,7 @@ public:
   }
 
   /**
-   * Set the Namespace that this handler is attached to. (This is
-   * automatically called when you call Namespace.setHandler.) This method
-   * does not attach this Handler to the Namespace.
+   * Set the Namespace that this handler is attached to.
    * @param nameSpace The Handler's Namespace.
    * @return This GeneralizedObjectHandler so you can chain calls to update values.
    * @throws runtime_error if this Handler is already attached to a different
