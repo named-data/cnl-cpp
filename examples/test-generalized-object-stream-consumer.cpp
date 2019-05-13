@@ -54,9 +54,8 @@ int main(int argc, char** argv)
         objectNamespace.getBlobObject().toRawStr() << endl;
     };
     int pipelineSize = 10;
-    stream.setHandler
-      (ptr_lib::make_shared<GeneralizedObjectStreamHandler>
-       (pipelineSize, onNewObject)).objectNeeded();
+    GeneralizedObjectStreamHandler
+      (&stream, pipelineSize, onNewObject).objectNeeded();
 
     while (true) {
       face.processEvents();

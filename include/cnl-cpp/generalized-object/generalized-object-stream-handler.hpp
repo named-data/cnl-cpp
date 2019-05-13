@@ -43,6 +43,8 @@ public:
   /**
    * Create a GeneralizedObjectStreamHandler with the optional
    * onSequencedGeneralizedObject callback.
+   * @param nameSpace (optional) Set the Namespace that this handler is attached
+   * to. If omitted or null, you can call setNamespace() later.
    * @param pipelineSize (optional) The pipeline size (number of objects, not
    * interests). The pipelineSize times the expected period between objects
    * should be less than the maximum interest lifetime.
@@ -68,12 +70,14 @@ public:
    * OBJECT_READY state.
    */
   GeneralizedObjectStreamHandler
-    (int pipelineSize = 8,
+    (Namespace* nameSpace = 0, int pipelineSize = 8,
      const OnSequencedGeneralizedObject& onSequencedGeneralizedObject =
        OnSequencedGeneralizedObject())
   : impl_(ndn::ptr_lib::make_shared<Impl>
           (pipelineSize, onSequencedGeneralizedObject))
   {
+    if (nameSpace)
+      setNamespace(nameSpace);
   }
 
   /**
