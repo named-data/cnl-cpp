@@ -57,8 +57,7 @@ int main(int argc, char** argv)
 
     Milliseconds publishIntervalMs = 1000.0;
     Namespace stream("/ndn/eb/stream/run/28/annotations", &keyChain);
-    auto handler = ptr_lib::make_shared<GeneralizedObjectStreamHandler>();
-    stream.setHandler(handler);
+    auto handler = ptr_lib::make_shared<GeneralizedObjectStreamHandler>(&stream);
 
     cout << "Register prefix " << stream.getName().toUri() << endl;
     // Set the face and register to receive Interests.
