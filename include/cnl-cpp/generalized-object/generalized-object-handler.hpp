@@ -42,6 +42,8 @@ public:
   /**
    * Create a GeneralizedObjectHandler with the optional onGeneralizedObject
    * callback.
+   * @param nameSpace (optional) Set the Namespace that this handler is attached
+   * to. If omitted or null, you can call setNamespace() later.
    * @param onGeneralizedObject (optional) When the ContentMetaInfo is received
    * and the hasSegments is false, this calls 
    * onGeneralizedObject(contentMetaInfo, objectNamespace) where contentMetaInfo
@@ -57,9 +59,12 @@ public:
    * which this is attached and listen for the OBJECT_READY state.
    */
   GeneralizedObjectHandler
-    (const OnGeneralizedObject& onGeneralizedObject = OnGeneralizedObject())
+    (Namespace* nameSpace = 0,
+     const OnGeneralizedObject& onGeneralizedObject = OnGeneralizedObject())
   : impl_(ndn::ptr_lib::make_shared<Impl>(onGeneralizedObject))
   {
+    if (nameSpace)
+      setNamespace(nameSpace);
   }
 
   /**

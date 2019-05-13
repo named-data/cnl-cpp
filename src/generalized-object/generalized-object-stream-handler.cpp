@@ -168,11 +168,10 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
         targetNamespace[GeneralizedObjectHandler::getNAME_COMPONENT_META()];
       // Make sure we didn't already request it.
       if (sequenceMeta.getState() < NamespaceState_INTEREST_EXPRESSED) {
-        ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
-          ptr_lib::make_shared<GeneralizedObjectHandler>
-            (bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
-                  shared_from_this(), _1, _2, sequenceNumber));
-        targetNamespace.setHandler(generalizedObjectHandler);
+        ptr_lib::make_shared<GeneralizedObjectHandler>
+          (&targetNamespace,
+           bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
+                shared_from_this(), _1, _2, sequenceNumber));
         sequenceMeta.objectNeeded();
       }
     }
@@ -252,9 +251,9 @@ GeneralizedObjectStreamHandler::Impl::requestNewSequenceNumbers()
     // Debug: Do we have to attach a new handler for each sequence number?
     ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
       ptr_lib::make_shared<GeneralizedObjectHandler>
-        (bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
+        (&sequenceNamespace,
+         bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
               shared_from_this(), _1, _2, sequenceNumber));
-    sequenceNamespace.setHandler(generalizedObjectHandler);
     if (sequenceNumber > maxRequestedSequenceNumber_)
       maxRequestedSequenceNumber_ = sequenceNumber;
     sequenceMeta.objectNeeded();

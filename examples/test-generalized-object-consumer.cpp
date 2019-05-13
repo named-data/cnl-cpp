@@ -54,8 +54,7 @@ int main(int argc, char** argv)
         objectNamespace.getBlobObject().toRawStr() << endl;
       enabled = false;
     };
-    objectPrefix.setHandler
-      (ptr_lib::make_shared<GeneralizedObjectHandler>(onObject)).objectNeeded();
+    GeneralizedObjectHandler(&objectPrefix, onObject).objectNeeded();
 
     while (enabled) {
       face.processEvents();
