@@ -36,12 +36,17 @@ public:
 
   /**
    * Create a SegmentStreamHandler with the optional onSegment callback.
+   * @param nameSpace (optional) Set the Namespace that this handler is attached
+   * to. If omitted or null, you can call setNamespace() later.
    * @param onSegment (optional) If supplied, this calls addOnSegment(onSegment).
    * You may also call addOnSegment directly.
    */
-  SegmentStreamHandler(const OnSegment& onSegment = OnSegment())
+  SegmentStreamHandler
+    (Namespace* nameSpace = 0, const OnSegment& onSegment = OnSegment())
   : impl_(ndn::ptr_lib::make_shared<Impl>(onSegment))
   {
+    if (nameSpace)
+      setNamespace(nameSpace);
   }
 
   /**
