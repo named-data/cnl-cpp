@@ -174,8 +174,7 @@ int main(int argc, char** argv)
         objectNamespace.getBlobObject().toRawStr() << endl;
       enabled = false;
     };
-    contentNamespace.setHandler
-      (ptr_lib::make_shared<SegmentedObjectHandler>(onObject)).objectNeeded();
+    SegmentedObjectHandler(&contentNamespace, onObject).objectNeeded();
 
     while (enabled) {
       face.processEvents();

@@ -49,8 +49,7 @@ int main(int argc, char** argv)
         objectNamespace.getBlobObject().size() << endl;
       enabled = false;
     };
-    page.setHandler
-      (ptr_lib::make_shared<SegmentedObjectHandler>(onObject)).objectNeeded();
+    SegmentedObjectHandler(&page, onObject).objectNeeded();
 
     while (enabled) {
       face.processEvents();

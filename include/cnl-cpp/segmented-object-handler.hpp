@@ -36,15 +36,21 @@ public:
 
   /**
    * Create a SegmentedObjectHandler with the optional onSegmentedObject callback.
+   * @param nameSpace (optional) Set the Namespace that this handler is attached
+   * to. If omitted or null, you can call setNamespace() later.
    * @param onSegmentedObject (optional) If supplied, this calls
    * addOnSegmentedObject(onSegmentedObject). You may also call
    * addOnSegmentedObject directly.
    */
   SegmentedObjectHandler
-    (const OnSegmentedObject& onSegmentedObject = OnSegmentedObject())
+    (Namespace* nameSpace = 0,
+     const OnSegmentedObject& onSegmentedObject = OnSegmentedObject())
   : impl_(ndn::ptr_lib::make_shared<Impl>(onSegmentedObject))
   {
     impl_->initialize(this);
+
+    if (nameSpace)
+      setNamespace(nameSpace);
   }
 
   /**
