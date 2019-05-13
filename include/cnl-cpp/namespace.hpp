@@ -129,6 +129,12 @@ public:
     Namespace&
     getNamespace() { return *namespace_; }
 
+    /**
+     * A convenience method to call getNamespace().objectNeeded().
+     */
+    void
+    objectNeeded(bool mustBeFresh = true);
+
   protected:
     /**
      * This protected method is called after this Handler's Namespace field is

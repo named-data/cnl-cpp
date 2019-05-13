@@ -46,6 +46,15 @@ Namespace::Handler::setNamespace(Namespace* nameSpace)
 }
 
 void
+Namespace::Handler::objectNeeded(bool mustBeFresh)
+{
+  if (!namespace_)
+    throw runtime_error("Handler::objectNeeded: The Namespace has not been set");
+
+  namespace_->objectNeeded(mustBeFresh);
+}
+
+void
 Namespace::Handler::onNamespaceSet()
 {
 }
