@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 
     Milliseconds publishIntervalMs = 1000.0;
     Namespace stream("/ndn/eb/stream/run/28/annotations", &keyChain);
-    auto handler = ptr_lib::make_shared<GeneralizedObjectStreamHandler>(&stream);
+    GeneralizedObjectStreamHandler handler(&stream);
 
     cout << "Register prefix " << stream.getName().toUri() << endl;
     // Set the face and register to receive Interests.
@@ -73,9 +73,9 @@ int main(int argc, char** argv)
       MillisecondsSince1970 now = ndn_getNowMilliseconds();
       if (now >= previousPublishMs + publishIntervalMs) {
         cout << "Preparing data for sequence " <<
-          (handler->getProducedSequenceNumber() + 1) << endl;
-        handler->addObject
-          (Blob::fromRawStr("Payload " + toString(handler->getProducedSequenceNumber() + 1)),
+          (handler.getProducedSequenceNumber() + 1) << endl;
+        handler.addObject
+          (Blob::fromRawStr("Payload " + toString(handler.getProducedSequenceNumber() + 1)),
            "application/json");
 
         previousPublishMs = now;
