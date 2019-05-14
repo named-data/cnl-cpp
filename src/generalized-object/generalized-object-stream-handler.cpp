@@ -245,12 +245,10 @@ GeneralizedObjectStreamHandler::Impl::requestNewSequenceNumbers()
     ++nOutstandingSequenceNumbers;
     ++nRequestedSequenceNumbers_;
 
-    // Debug: Do we have to attach a new handler for each sequence number?
-    ptr_lib::shared_ptr<GeneralizedObjectHandler> generalizedObjectHandler =
-      ptr_lib::make_shared<GeneralizedObjectHandler>
-        (&sequenceNamespace,
-         bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
-              shared_from_this(), _1, _2, sequenceNumber));
+    ptr_lib::make_shared<GeneralizedObjectHandler>
+      (&sequenceNamespace,
+       bind(&GeneralizedObjectStreamHandler::Impl::onGeneralizedObject,
+            shared_from_this(), _1, _2, sequenceNumber));
     if (sequenceNumber > maxRequestedSequenceNumber_)
       maxRequestedSequenceNumber_ = sequenceNumber;
     sequenceMeta.objectNeeded();
