@@ -143,6 +143,10 @@ public:
     onNamespaceSet();
 
   private:
+    // Disable the copy constructor and assignment operator.
+    Handler(const Handler& other);
+    Handler& operator=(const Handler& other);
+
     Namespace* namespace_;
   };
 
