@@ -676,7 +676,7 @@ public:
     getName() const { return name_; }
 
     Namespace*
-    getParent() { return parent_; }
+    getParent() { return &parent_->outerNamespace_; }
 
     Namespace*
     getRoot() { return &root_->outerNamespace_; }
@@ -777,7 +777,7 @@ public:
      * Get this or a parent Namespace node that has been enabled with enableSync.
      * @return The sync-enabled node, or null if not set on this or any parent.
      */
-    Namespace*
+    Namespace::Impl*
     getSyncNode();
 
     void
@@ -912,9 +912,9 @@ public:
      * ndn_getNowMilliseconds for checking Data packet freshness.
      * @return The Namespace object for the matched name or null if not found.
      */
-    static Namespace*
+    static Namespace::Impl*
     findBestMatchName
-      (Namespace& nameSpace, const ndn::Interest& interest,
+      (Namespace::Impl& nameSpace, const ndn::Interest& interest,
        ndn::MillisecondsSince1970 nowMilliseconds);
 
     void
@@ -946,7 +946,7 @@ public:
     Namespace& outerNamespace_;
     ndn::Name name_;
     // parent_ and root_ may be updated by createChild.
-    Namespace* parent_;
+    Namespace::Impl* parent_;
     Namespace::Impl* root_;
     // The key is a Name::Component. The value is the child Namespace.
     std::map<ndn::Name::Component, ndn::ptr_lib::shared_ptr<Namespace>> children_;

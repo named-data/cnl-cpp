@@ -304,21 +304,21 @@ Namespace::Impl::objectNeeded(bool mustBeFresh)
   interest.setInterestLifetimeMilliseconds(4000.0);
   interest.setMustBeFresh(mustBeFresh);
   // Debug: This requires a Data packet. Check for an object without one?
-  Namespace* bestMatch = findBestMatchName
-    (this->outerNamespace_, interest, ndn_getNowMilliseconds());
-  if (bestMatch && bestMatch->impl_->object_) {
+  Namespace::Impl* bestMatch = findBestMatchName
+    (*this, interest, ndn_getNowMilliseconds());
+  if (bestMatch && bestMatch->object_) {
     // Set the state again to fire the callbacks.
-    bestMatch->impl_->setState(NamespaceState_OBJECT_READY);
+    bestMatch->setState(NamespaceState_OBJECT_READY);
     return;
   }
 
   // Ask all OnObjectNeeded callbacks if they can produce.
   bool canProduce = false;
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    if (nameSpace->impl_->fireOnObjectNeeded(outerNamespace_))
+  Namespace::Impl* impl = this;
+  while (impl) {
+    if (impl->fireOnObjectNeeded(outerNamespace_))
       canProduce = true;
-    nameSpace = nameSpace->impl_->parent_;
+    impl = impl->parent_;
   }
 
   // Debug: Check if the object has been set (even if onObjectNeeded returned false.)
@@ -355,11 +355,11 @@ Namespace::Impl::removeCallback(uint64_t callbackId)
 Face*
 Namespace::Impl::getFace_()
 {
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    if (nameSpace->impl_->face_)
-      return nameSpace->impl_->face_;
-    nameSpace = nameSpace->impl_->parent_;
+  Namespace::Impl* impl = this;
+  while (impl) {
+    if (impl->face_)
+      return impl->face_;
+    impl = impl->parent_;
   }
 
   return 0;
@@ -368,24 +368,24 @@ Namespace::Impl::getFace_()
 KeyChain*
 Namespace::Impl::getKeyChain_()
 {
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    if (nameSpace->impl_->keyChain_)
-      return nameSpace->impl_->keyChain_;
-    nameSpace = nameSpace->impl_->parent_;
+  Namespace::Impl* impl = this;
+  while (impl) {
+    if (impl->keyChain_)
+      return impl->keyChain_;
+    impl = impl->parent_;
   }
 
   return 0;
 }
 
-Namespace*
+Namespace::Impl*
 Namespace::Impl::getSyncNode()
 {
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    if (nameSpace->impl_->syncDepth_ >= 0)
-      return nameSpace;
-    nameSpace = nameSpace->impl_->parent_;
+  Namespace::Impl* impl = this;
+  while (impl) {
+    if (impl->syncDepth_ >= 0)
+      return impl;
+    impl = impl->parent_;
   }
 
   return 0;
@@ -394,11 +394,11 @@ Namespace::Impl::getSyncNode()
 Milliseconds
 Namespace::Impl::getMaxInterestLifetime()
 {
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    if (nameSpace->impl_->maxInterestLifetime_ >= 0)
-      return nameSpace->impl_->maxInterestLifetime_;
-    nameSpace = nameSpace->impl_->parent_;
+  Namespace::Impl* impl = this;
+  while (impl) {
+    if (impl->maxInterestLifetime_ >= 0)
+      return impl->maxInterestLifetime_;
+    impl =impl->parent_;
   }
 
   // Return the default.
@@ -408,11 +408,11 @@ Namespace::Impl::getMaxInterestLifetime()
 const MetaInfo*
 Namespace::Impl::getNewDataMetaInfo_()
 {
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    if (nameSpace->impl_->newDataMetaInfo_)
-      return nameSpace->impl_->newDataMetaInfo_.get();
-    nameSpace = nameSpace->impl_->parent_;
+  Namespace::Impl* impl = this;
+  while (impl) {
+    if (impl->newDataMetaInfo_)
+      return impl->newDataMetaInfo_.get();
+    impl = impl->parent_;
   }
 
   return 0;
@@ -421,11 +421,11 @@ Namespace::Impl::getNewDataMetaInfo_()
 DecryptorV2*
 Namespace::Impl::getDecryptor()
 {
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    if (nameSpace->impl_->decryptor_)
-      return nameSpace->impl_->decryptor_;
-    nameSpace = nameSpace->impl_->parent_;
+  Namespace::Impl* impl =this;
+  while (impl) {
+    if (impl->decryptor_)
+      return impl->decryptor_;
+    impl = impl->parent_;
   }
 
   return 0;
@@ -444,16 +444,16 @@ void
 Namespace::Impl::deserialize_
   (const Blob& blob, const Handler::OnObjectSet& onObjectSet)
 {
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    if (nameSpace->impl_->fireOnDeserializeNeeded
+  Namespace::Impl* impl = this;
+  while (impl) {
+    if (impl->fireOnDeserializeNeeded
         (outerNamespace_, blob, onObjectSet)) {
       // Wait for the Handler to set the object.
       setState(NamespaceState_DESERIALIZING);
       return;
     }
 
-    nameSpace = nameSpace->impl_->parent_;
+    impl = impl->parent_;
   }
 
   // Debug: Check if the object has been set (even if canDeserialize returned false.)
@@ -467,7 +467,7 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
 {
   ptr_lib::shared_ptr<Namespace> child =
     ptr_lib::make_shared<Namespace>(Name(name_).append(component));
-  child->impl_->parent_ = &outerNamespace_;
+  child->impl_->parent_ = this;
   child->impl_->root_ = root_;
   children_[component] = child;
 
@@ -476,12 +476,12 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
     
     // Sync this name under the same conditions that we report a NAME_EXISTS.
     if (root_->fullPSync_) {
-      Namespace* syncNode = child->impl_->getSyncNode();
+      Namespace::Impl* syncNode = child->impl_->getSyncNode();
       if (syncNode) {
         // Only sync names to the specified depth.
-        int depth = child->impl_->name_.size() - syncNode->impl_->name_.size();
+        int depth = child->impl_->name_.size() - syncNode->name_.size();
 
-        if (depth <= syncNode->impl_->syncDepth_)
+        if (depth <= syncNode->syncDepth_)
           // If createChild is called when onNamesUpdate receives a name from
           //   fullPSync_, then publishName already has it and will ignore it.
           root_->fullPSync_->publishName(child->impl_->name_);
@@ -499,12 +499,9 @@ Namespace::Impl::setState(NamespaceState state)
 
   // Fire callbacks.
   Namespace::Impl* impl = this;
-  while (true) {
+  while (impl) {
     impl->fireOnStateChanged(outerNamespace_, state);
-    if (!impl->parent_)
-      break;
-
-    impl = impl->parent_->impl_.get();
+    impl = impl->parent_;
   }
 }
 
@@ -542,10 +539,10 @@ Namespace::Impl::setValidateState(NamespaceValidateState validateState)
   validateState_ = validateState;
 
   // Fire callbacks.
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    nameSpace->impl_->fireOnValidateStateChanged(outerNamespace_, validateState);
-    nameSpace = nameSpace->impl_->parent_;
+  Namespace::Impl* impl = this;
+  while (impl) {
+    impl->fireOnValidateStateChanged(outerNamespace_, validateState);
+    impl = impl->parent_;
   }
 }
 
@@ -679,11 +676,11 @@ Namespace::Impl::onInterest
   // Check if the Namespace node exists and has a matching Data packet.
   Namespace& interestNamespace = getChild(interestName);
   if (hasChild(interestName)) {
-    Namespace* bestMatch = findBestMatchName
-      (interestNamespace, *interest, ndn_getNowMilliseconds());
+    Namespace::Impl* bestMatch = findBestMatchName
+      (*interestNamespace.impl_, *interest, ndn_getNowMilliseconds());
     if (bestMatch) {
       // findBestMatchName makes sure there is a data_ packet.
-      face.putData(*bestMatch->impl_->data_);
+      face.putData(*bestMatch->data_);
       return;
     }
   }
@@ -693,35 +690,35 @@ Namespace::Impl::onInterest
 
   // Ask all OnObjectNeeded callbacks if they can produce.
   bool canProduce = false;
-  Namespace* nameSpace = &interestNamespace;
-  while (nameSpace) {
-    if (nameSpace->impl_->fireOnObjectNeeded(interestNamespace))
+  Namespace::Impl* impl = interestNamespace.impl_.get();
+  while (impl) {
+    if (impl->fireOnObjectNeeded(interestNamespace))
       canProduce = true;
-    nameSpace = nameSpace->impl_->parent_;
+    impl = impl->parent_;
   }
   if (canProduce)
     interestNamespace.impl_->setState(NamespaceState_PRODUCING_OBJECT);
 }
 
-Namespace*
+Namespace::Impl*
 Namespace::Impl::findBestMatchName
-  (Namespace& nameSpace, const Interest& interest,
+  (Namespace::Impl& nameSpace, const Interest& interest,
    MillisecondsSince1970 nowMilliseconds)
 {
-  Namespace *bestMatch = 0;
+  Namespace::Impl *bestMatch = 0;
 
   // Search the children backwards which will result in a "less than" name
   // among names of the same length.
   for (map<Name::Component, ptr_lib::shared_ptr<Namespace>>::reverse_iterator
-        i = nameSpace.impl_->children_.rbegin();
-       i != nameSpace.impl_->children_.rend(); ++i) {
-    Namespace& child = *i->second;
-    Namespace* childBestMatch = findBestMatchName
+        i = nameSpace.children_.rbegin();
+       i != nameSpace.children_.rend(); ++i) {
+    Namespace::Impl& child = *i->second->impl_;
+    Namespace::Impl* childBestMatch = findBestMatchName
       (child, interest, nowMilliseconds);
 
     if (childBestMatch &&
         (!bestMatch ||
-         childBestMatch->getName().size() >= bestMatch->getName().size()))
+         childBestMatch->name_.size() >= bestMatch->name_.size()))
       bestMatch = childBestMatch;
   }
 
@@ -730,13 +727,13 @@ Namespace::Impl::findBestMatchName
     return bestMatch;
 
   if (interest.getMustBeFresh() &&
-      nameSpace.impl_->freshnessExpiryTimeMilliseconds_ >= 0 &&
-      nowMilliseconds >= nameSpace.impl_->freshnessExpiryTimeMilliseconds_)
+      nameSpace.freshnessExpiryTimeMilliseconds_ >= 0 &&
+      nowMilliseconds >= nameSpace.freshnessExpiryTimeMilliseconds_)
     // The Data packet is no longer fresh.
     // Debug: When to set the state to OBJECT_READY_BUT_STALE?
     return 0;
 
-  if (nameSpace.impl_->data_ && interest.matchesData(*nameSpace.impl_->data_))
+  if (nameSpace.data_ && interest.matchesData(*nameSpace.data_))
     return &nameSpace;
 
   return 0;
