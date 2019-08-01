@@ -498,10 +498,13 @@ Namespace::Impl::setState(NamespaceState state)
   state_ = state;
 
   // Fire callbacks.
-  Namespace* nameSpace = &outerNamespace_;
-  while (nameSpace) {
-    nameSpace->impl_->fireOnStateChanged(outerNamespace_, state);
-    nameSpace = nameSpace->impl_->parent_;
+  Namespace::Impl* impl = this;
+  while (true) {
+    impl->fireOnStateChanged(outerNamespace_, state);
+    if (!impl->parent_)
+      break;
+
+    impl = impl->parent_->impl_.get();
   }
 }
 
