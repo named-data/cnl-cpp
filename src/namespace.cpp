@@ -69,7 +69,7 @@ Namespace::getNextCallbackId()
 Namespace::Impl::Impl
   (Namespace& outerNamespace, const Name& name, KeyChain* keyChain)
 : outerNamespace_(outerNamespace), name_(name), keyChain_(keyChain), parent_(0),
-  root_(&outerNamespace), state_(NamespaceState_NAME_EXISTS),
+  root_(this), state_(NamespaceState_NAME_EXISTS),
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), 
   freshnessExpiryTimeMilliseconds_(-1.0), face_(0), decryptor_(0),
   maxInterestLifetime_(-1), syncDepth_(-1)
@@ -201,9 +201,9 @@ Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
     throw runtime_error
       ("The Data packet name does not equal the name of this Namespace node");
 
-  if (root_->impl_->pendingIncomingInterestTable_)
+  if (root_->pendingIncomingInterestTable_)
     // Quickly send the Data packet to satisfy interest, before calling callbacks.
-    root_->impl_->pendingIncomingInterestTable_->satisfyInterests(*data);
+    root_->pendingIncomingInterestTable_->satisfyInterests(*data);
 
   if (data->getMetaInfo().getFreshnessPeriod() >= 0.0)
     freshnessExpiryTimeMilliseconds_ =
@@ -263,11 +263,11 @@ Namespace::Impl::setFace
   face_ = face;
 
   if (onRegisterFailed) {
-    if (!root_->impl_->pendingIncomingInterestTable_)
+    if (!root_->pendingIncomingInterestTable_)
       // All onInterest callbacks share this in the root node. When we add a new
       // Data packet to a Namespace node, we will also check if it satisfies a
       // pending Interest.
-      root_->impl_->pendingIncomingInterestTable_ =
+      root_->pendingIncomingInterestTable_ =
         ptr_lib::make_shared<PendingIncomingInterestTable>();
 
     face->registerPrefix
@@ -280,12 +280,12 @@ Namespace::Impl::setFace
 void
 Namespace::Impl::enableSync(int depth)
 {
-  if (!root_->impl_->fullPSync_) {
+  if (!root_->fullPSync_) {
     Face* face = getFace_();
     if (!face)
       throw runtime_error("enableSync: You must first call setFace on this or a parent");
 
-    root_->impl_->fullPSync_ = ptr_lib::make_shared<FullPSync2017>
+    root_->fullPSync_ = ptr_lib::make_shared<FullPSync2017>
       (275, *face, Name("/CNL-sync"),
        bind(&Namespace::Impl::onNamesUpdate, shared_from_this(), _1),
        *getKeyChain_(), 1600, 1600);
@@ -475,7 +475,7 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
     child->impl_->setState(NamespaceState_NAME_EXISTS);
     
     // Sync this name under the same conditions that we report a NAME_EXISTS.
-    if (root_->impl_->fullPSync_) {
+    if (root_->fullPSync_) {
       Namespace* syncNode = child->impl_->getSyncNode();
       if (syncNode) {
         // Only sync names to the specified depth.
@@ -484,7 +484,7 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
         if (depth <= syncNode->impl_->syncDepth_)
           // If createChild is called when onNamesUpdate receives a name from
           //   fullPSync_, then publishName already has it and will ignore it.
-          root_->impl_->fullPSync_->publishName(child->impl_->name_);
+          root_->fullPSync_->publishName(child->impl_->name_);
       }
     }
   }
@@ -689,7 +689,7 @@ Namespace::Impl::onInterest
   }
 
   // No Data packet found, so save the pending Interest.
-  root_->impl_->pendingIncomingInterestTable_->add(interest, face);
+  root_->pendingIncomingInterestTable_->add(interest, face);
 
   // Ask all OnObjectNeeded callbacks if they can produce.
   bool canProduce = false;

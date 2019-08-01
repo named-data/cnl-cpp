@@ -679,7 +679,7 @@ public:
     getParent() { return parent_; }
 
     Namespace*
-    getRoot() { return root_; }
+    getRoot() { return &root_->outerNamespace_; }
 
     NamespaceState
     getState() { return state_; }
@@ -947,7 +947,7 @@ public:
     ndn::Name name_;
     // parent_ and root_ may be updated by createChild.
     Namespace* parent_;
-    Namespace* root_;
+    Namespace::Impl* root_;
     // The key is a Name::Component. The value is the child Namespace.
     std::map<ndn::Name::Component, ndn::ptr_lib::shared_ptr<Namespace>> children_;
     NamespaceState state_;
