@@ -111,28 +111,28 @@ Namespace::Impl::getChild(const Name& descendantName)
     throw runtime_error
       ("The name of this node is not a prefix of the descendant name");
 
-  // Find or create the child node whose name equals the descendantName.
-  // We know descendantNamespace is a prefix, so we can just go by
+  // Find or create the child node whose name equals the descendantName. We know
+  // the name of the descendant Namespace is a prefix, so we can just go by
   // component count instead of a full compare.
-  Namespace* descendantNamespace = &outerNamespace_;
-  while (descendantNamespace->impl_->name_.size() < descendantName.size()) {
+  Namespace::Impl* descendantImpl = this;
+  while (descendantImpl->name_.size() < descendantName.size()) {
     const Name::Component& nextComponent =
-      descendantName[descendantNamespace->impl_->name_.size()];
+      descendantName[descendantImpl->name_.size()];
 
     map<Name::Component, ptr_lib::shared_ptr<Namespace>>::iterator
-      child = descendantNamespace->impl_->children_.find(nextComponent);
-    if (child !=  descendantNamespace->impl_->children_.end())
-      descendantNamespace = child->second.get();
+      child = descendantImpl->children_.find(nextComponent);
+    if (child != descendantImpl->children_.end())
+      descendantImpl = child->second->impl_.get();
     else {
       // Only fire the callbacks for the leaf node.
       bool isLeaf =
-        (descendantNamespace->impl_->name_.size() == descendantName.size() - 1);
-      descendantNamespace = &descendantNamespace->impl_->createChild
-        (nextComponent, isLeaf);
+        (descendantImpl->name_.size() == descendantName.size() - 1);
+      descendantImpl = descendantImpl->createChild
+        (nextComponent, isLeaf).impl_.get();
     }
   }
 
-  return *descendantNamespace;
+  return descendantImpl->outerNamespace_;
 }
 
 ptr_lib::shared_ptr<vector<Name::Component>>
