@@ -87,20 +87,20 @@ Namespace::Impl::hasChild(const Name& descendantName)
     // A trivial case where it is already the name of this node.
     return true;
 
-  // Find the child node whose name equals the descendantName. We know
-  // descendantNamespace is a prefix, so we can just go by component count
+  // Find the child node whose name equals the descendantName. We know the name
+  // of the descendant Namespace is a prefix, so we can just go by component count
   // instead of a full compare.
-  Namespace* descendantNamespace = &outerNamespace_;
+  Namespace::Impl* descendantImpl = this;
   while (true) {
     const Name::Component& nextComponent =
-      descendantName[descendantNamespace->getName().size()];
-    if (!descendantNamespace->hasChild(nextComponent))
+      descendantName[descendantImpl->name_.size()];
+    if (!descendantImpl->hasChild(nextComponent))
       return false;
 
-    if (descendantNamespace->getName().size() + 1 == descendantName.size())
+    if (descendantImpl->name_.size() + 1 == descendantName.size())
       // nextComponent is the final component.
       return true;
-    descendantNamespace = descendantNamespace->impl_->children_[nextComponent].get();
+    descendantImpl = descendantImpl->children_[nextComponent]->impl_.get();
   }
 }
 
