@@ -72,7 +72,7 @@ Namespace::Impl::Impl
   root_(this), state_(NamespaceState_NAME_EXISTS),
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), 
   freshnessExpiryTimeMilliseconds_(-1.0), face_(0), decryptor_(0),
-  maxInterestLifetime_(-1), syncDepth_(-1)
+  maxInterestLifetime_(-1), syncDepth_(-1), registeredPrefixId_(0)
 {
 }
 
@@ -260,6 +260,17 @@ Namespace::Impl::setFace
   (Face* face, const OnRegisterFailed& onRegisterFailed,
    const OnRegisterSuccess& onRegisterSuccess)
 {
+  if (!face) {
+    // Remove the Face if it is set.
+    if (face_) {
+      face_->removeRegisteredPrefix(registeredPrefixId_);
+      // TODO: Remove the Face and callbacks from root_->fullPSync_.
+      face_ = 0;
+    }
+
+    return;
+  }
+
   face_ = face;
 
   if (onRegisterFailed) {
@@ -270,7 +281,7 @@ Namespace::Impl::setFace
       root_->pendingIncomingInterestTable_ =
         ptr_lib::make_shared<PendingIncomingInterestTable>();
 
-    face->registerPrefix
+    registeredPrefixId_ = face->registerPrefix
       (name_,
        bind(&Namespace::Impl::onInterest, shared_from_this(), _1, _2, _3, _4, _5),
        onRegisterFailed, onRegisterSuccess);

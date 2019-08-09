@@ -465,7 +465,8 @@ public:
    * TODO: Replace this by a mechanism for requesting a Data object which is
    * more general than a Face network operation.
    * @param face The Face object. If this Namespace object already has a Face
-   * object, it is replaced.
+   * object, it is replaced. If face is null, then unregister to receive
+   * Interest packets.
    * @param onRegisterFailed (optional) Call face.registerPrefix to register to
    * receive Interest packets under this prefix, and if register prefix fails
    * for any reason, this calls onRegisterFailed(prefix). However, if
@@ -964,6 +965,7 @@ public:
     ndn::ptr_lib::shared_ptr<ndn::Data> data_;
     ndn::ptr_lib::shared_ptr<Object> object_;
     ndn::Face* face_;
+    uint64_t registeredPrefixId_;
     ndn::KeyChain* keyChain_;
     ndn::ptr_lib::shared_ptr<ndn::MetaInfo> newDataMetaInfo_;
     ndn::DecryptorV2* decryptor_;
