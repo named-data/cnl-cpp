@@ -104,8 +104,8 @@ Namespace::Impl::hasChild(const Name& descendantName)
   }
 }
 
-Namespace&
-Namespace::Impl::getChild(const Name& descendantName)
+Namespace::Impl&
+Namespace::Impl::getChildImpl(const Name& descendantName)
 {
   if (!name_.isPrefixOf(descendantName))
     throw runtime_error
@@ -132,7 +132,7 @@ Namespace::Impl::getChild(const Name& descendantName)
     }
   }
 
-  return descendantImpl->outerNamespace_;
+  return *descendantImpl;
 }
 
 ptr_lib::shared_ptr<vector<Name::Component>>
@@ -674,10 +674,10 @@ Namespace::Impl::onInterest
     return;
 
   // Check if the Namespace node exists and has a matching Data packet.
-  Namespace& interestNamespace = getChild(interestName);
+  Namespace::Impl& interestNamespaceImpl = getChildImpl(interestName);
   if (hasChild(interestName)) {
     Namespace::Impl* bestMatch = findBestMatchName
-      (*interestNamespace.impl_, *interest, ndn_getNowMilliseconds());
+      (interestNamespaceImpl, *interest, ndn_getNowMilliseconds());
     if (bestMatch) {
       // findBestMatchName makes sure there is a data_ packet.
       face.putData(*bestMatch->data_);
@@ -690,14 +690,14 @@ Namespace::Impl::onInterest
 
   // Ask all OnObjectNeeded callbacks if they can produce.
   bool canProduce = false;
-  Namespace::Impl* impl = interestNamespace.impl_.get();
+  Namespace::Impl* impl = &interestNamespaceImpl;
   while (impl) {
-    if (impl->fireOnObjectNeeded(interestNamespace))
+    if (impl->fireOnObjectNeeded(interestNamespaceImpl.outerNamespace_))
       canProduce = true;
     impl = impl->parent_;
   }
   if (canProduce)
-    interestNamespace.impl_->setState(NamespaceState_PRODUCING_OBJECT);
+    interestNamespaceImpl.setState(NamespaceState_PRODUCING_OBJECT);
 }
 
 Namespace::Impl*
@@ -744,31 +744,31 @@ Namespace::Impl::onData
   (const ptr_lib::shared_ptr<const Interest>& interest,
    const ptr_lib::shared_ptr<Data>& data)
 {
-  Namespace& dataNamespace = getChild(data->getName());
-  if (!dataNamespace.setData(data))
+  Namespace::Impl& dataNamespaceImpl = getChildImpl(data->getName());
+  if (!dataNamespaceImpl.setData(data))
     // A Data packet is already attached.
     return;
   setState(NamespaceState_DATA_RECEIVED);
 
   // TODO: Start the validator.
-  dataNamespace.impl_->setValidateState(NamespaceValidateState_VALIDATING);
+  dataNamespaceImpl.setValidateState(NamespaceValidateState_VALIDATING);
 
-  DecryptorV2* decryptor = dataNamespace.impl_->getDecryptor();
+  DecryptorV2* decryptor = dataNamespaceImpl.getDecryptor();
   if (!decryptor) {
-    dataNamespace.impl_->deserialize_(data->getContent());
+    dataNamespaceImpl.deserialize_(data->getContent());
     return;
   }
 
   // Decrypt, then deserialize.
-  dataNamespace.impl_->setState(NamespaceState_DECRYPTING);
+  dataNamespaceImpl.setState(NamespaceState_DECRYPTING);
   ptr_lib::shared_ptr<EncryptedContent> encryptedContent =
    ptr_lib::make_shared<EncryptedContent>();
   try {
     encryptedContent->wireDecodeV2(data->getContent());
   } catch (const std::exception& ex) {
-    dataNamespace.impl_->decryptionError_ =
+    dataNamespaceImpl.decryptionError_ =
       string("Error decoding the EncryptedContent: ") + ex.what();
-    dataNamespace.impl_->setState(NamespaceState_DECRYPTION_ERROR);
+    dataNamespaceImpl.setState(NamespaceState_DECRYPTION_ERROR);
     return;
   }
 
@@ -819,7 +819,7 @@ Namespace::Impl::onNamesUpdate
     }
 
     // This will create the name if it doesn't exist.
-    getChild(*name);
+    getChildImpl(*name);
   }
 }
 

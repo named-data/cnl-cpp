@@ -720,7 +720,13 @@ public:
     }
 
     Namespace&
-    getChild(const ndn::Name& descendantName);
+    getChild(const ndn::Name& descendantName)
+    {
+      return getChildImpl(descendantName).outerNamespace_;
+    }
+
+    Namespace::Impl&
+    getChildImpl(const ndn::Name& descendantName);
 
     ndn::ptr_lib::shared_ptr<std::vector<ndn::Name::Component>>
     getChildComponents();
