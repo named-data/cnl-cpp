@@ -48,7 +48,8 @@ GeneralizedObjectStreamHandler::Impl::Impl
 
 void
 GeneralizedObjectStreamHandler::Impl::setObject
-  (int sequenceNumber, const ndn::Blob& object, const std::string& contentType)
+  (int sequenceNumber, const Blob& object, const std::string& contentType,
+   const Blob& other)
 {
   if (!namespace_)
     throw runtime_error
@@ -57,7 +58,8 @@ GeneralizedObjectStreamHandler::Impl::setObject
   producedSequenceNumber_ = sequenceNumber;
   Namespace& sequenceNamespace =
     (*namespace_)[Name::Component::fromSequenceNumber(producedSequenceNumber_)];
-  generalizedObjectHandler_.setObject(sequenceNamespace, object, contentType);
+  generalizedObjectHandler_.setObject
+    (sequenceNamespace, object, contentType, other);
 }
 
 void
@@ -198,7 +200,7 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
 
 void
 GeneralizedObjectStreamHandler::Impl::onGeneralizedObject
-  (const ndn::ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
+  (const ptr_lib::shared_ptr<ContentMetaInfoObject>& contentMetaInfo,
    Namespace& objectNamespace, int sequenceNumber)
 {
   if (onSequencedGeneralizedObject_) {

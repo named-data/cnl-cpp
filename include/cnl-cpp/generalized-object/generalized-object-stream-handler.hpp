@@ -89,12 +89,17 @@ public:
    * value for getProducedSequenceNumber()
    * @param object The object to publish as a Generalized Object.
    * @param contentType The content type for the content _meta packet.
+   * @param other (optional) If the "other" Blob size is greater than zero, then
+   * put it in the _meta packet and use segments for the object Blob (even if it
+   * is small). If the "other" Blob isNull() or the size is zero, then don't use
+   * it.
    */
   void
   setObject
-    (int sequenceNumber, const ndn::Blob& object, const std::string& contentType)
+    (int sequenceNumber, const ndn::Blob& object, const std::string& contentType,
+     const ndn::Blob& other = ndn::Blob())
   {
-    impl_->setObject(sequenceNumber, object, contentType);
+    impl_->setObject(sequenceNumber, object, contentType, other);
   }
 
   /**
@@ -102,11 +107,17 @@ public:
    * the sequenceNumber is the current getProducedSequenceNumber() + 1.
    * @param object The object to publish as a Generalized Object.
    * @param contentType The content type for the content _meta packet.
+   * @param other (optional) If the "other" Blob size is greater than zero, then
+   * put it in the _meta packet and use segments for the object Blob (even if it
+   * is small). If the "other" Blob isNull() or the size is zero, then don't use
+   * it.
    */
   void
-  addObject(const ndn::Blob& object, const std::string& contentType)
+  addObject
+    (const ndn::Blob& object, const std::string& contentType,
+     const ndn::Blob& other = ndn::Blob())
   {
-    setObject(getProducedSequenceNumber() + 1, object, contentType);
+    setObject(getProducedSequenceNumber() + 1, object, contentType, other);
   }
 
   /**
@@ -180,7 +191,7 @@ private:
     void
     setObject
       (int sequenceNumber, const ndn::Blob& object,
-       const std::string& contentType);
+       const std::string& contentType, const ndn::Blob& other);
 
     int
     getProducedSequenceNumber() { return producedSequenceNumber_; }

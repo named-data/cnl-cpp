@@ -101,20 +101,24 @@ public:
 
   /**
    * Create a _meta packet with the given contentType and as a child of the
-   * given Namespace. If the object is large enough to require segmenting, also
-   * segment the object and create child segment packets plus a signature
-   * _manifest packet of the given Namespace.
+   * given Namespace. If the "other" Blob is provided or if the object is large
+   * enough to require segmenting, also segment the object and create child
+   * segment packets plus a signature _manifest packet of the given Namespace.
    * @param nameSpace The Namespace to append segment packets to. This
    * ignores the Namespace from setNamespace().
    * @param object The object to publish as a Generalized Object.
    * @param contentType The content type for the content _meta packet.
+   * @param other (optional) If the "other" Blob size is greater than zero, then
+   * put it in the _meta packet and use segments for the object Blob (even if it
+   * is small). If the "other" Blob isNull() or the size is zero, then don't use
+   * it.
    */
   void
   setObject
     (Namespace& nameSpace, const ndn::Blob& object,
-     const std::string& contentType)
+     const std::string& contentType, const ndn::Blob& other = ndn::Blob())
   {
-    impl_->setObject(nameSpace, object, contentType);
+    impl_->setObject(nameSpace, object, contentType, other);
   }
 
   /**
@@ -210,7 +214,7 @@ private:
     void
     setObject
       (Namespace& nameSpace, const ndn::Blob& object,
-       const std::string& contentType);
+       const std::string& contentType, const ndn::Blob& other);
 
     int
     getInterestPipelineSize()

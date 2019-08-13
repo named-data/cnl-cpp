@@ -56,10 +56,12 @@ GeneralizedObjectHandler::Impl::setNComponentsAfterObjectNamespace
 
 void
 GeneralizedObjectHandler::Impl::setObject
-  (Namespace& nameSpace, const Blob& object, const string& contentType)
+  (Namespace& nameSpace, const Blob& object, const string& contentType,
+   const Blob& other)
 {
   bool hasSegments =
-    (object.size() > segmentedObjectHandler_->getMaxSegmentPayloadLength());
+    (object.size() > segmentedObjectHandler_->getMaxSegmentPayloadLength() ||
+     other.size() > 0);
 
   // Prepare the _meta packet.
   ContentMetaInfo contentMetaInfo;
@@ -70,6 +72,9 @@ GeneralizedObjectHandler::Impl::setObject
   if (!hasSegments)
     // We don't need to segment. Put the object in the "other" field.
     contentMetaInfo.setOther(object);
+  else if (other.size())
+    // We have an "other" field in addition to segments.
+    contentMetaInfo.setOther(other);
 
   nameSpace[getNAME_COMPONENT_META()].serializeObject
     (ptr_lib::make_shared<BlobObject>(contentMetaInfo.wireEncode()));
