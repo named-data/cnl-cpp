@@ -72,7 +72,7 @@ GeneralizedObjectHandler::Impl::setObject
   if (!hasSegments)
     // We don't need to segment. Put the object in the "other" field.
     contentMetaInfo.setOther(object);
-  else if (other.size())
+  else if (other.size() > 0)
     // We have an "other" field in addition to segments.
     contentMetaInfo.setOther(other);
 
