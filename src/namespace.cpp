@@ -527,8 +527,9 @@ Namespace::Impl::deserialize_
   Namespace::Impl* impl = this;
   while (impl) {
     if (impl->fireOnDeserializeNeeded(*this, blob, onObjectSet)) {
-      // Wait for the Handler to set the object.
-      setState(NamespaceState_DESERIALIZING);
+      // Wait for the Handler to set the object, if it hasn't yet.
+      if (state_ < NamespaceState_DESERIALIZING)
+        setState(NamespaceState_DESERIALIZING);
       return;
     }
 
