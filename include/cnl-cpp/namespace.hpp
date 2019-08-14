@@ -305,6 +305,11 @@ public:
   ndn::ptr_lib::shared_ptr<std::vector<ndn::Name::Component>>
   getChildComponents() { return impl_->getChildComponents(); }
 
+  /**
+   * Prepare Data packets for the object.
+   * However, if getIsShutDown() then do nothing.
+   * @param object
+   */
   void
   serializeObject(const ndn::ptr_lib::shared_ptr<Object>& object)
   {
@@ -316,6 +321,7 @@ public:
    * it. However, if a Data packet is already attached, do nothing and return
    * true. This does not update the Namespace state, decrypt, verify or
    * deserialize.
+   * However, if getIsShutDown() then do nothing.
    * @param data The Data packet object whose name must equal the name in this
    * Namespace node. To get the right Namespace, you can use
    * getChild(data.getName()). For efficiency, this does not copy the Data
@@ -464,9 +470,11 @@ public:
    * receive Interest packets under this prefix and answer with Data packets.
    * TODO: Replace this by a mechanism for requesting a Data object which is
    * more general than a Face network operation.
+   * However, if getIsShutDown() then do nothing (unless face is null).
    * @param face The Face object. If this Namespace object already has a Face
    * object, it is replaced. If face is null, then unregister to receive
-   * Interest packets.
+   * Interest packets. Note that shutdown() also does the same as setFace(null),
+   * in addition to shutting down this and child nodes.
    * @param onRegisterFailed (optional) Call face.registerPrefix to register to
    * receive Interest packets under this prefix, and if register prefix fails
    * for any reason, this calls onRegisterFailed(prefix). However, if
@@ -508,6 +516,7 @@ public:
   /**
    * Enable announcing added names and receiving announced names from other
    * users in the sync group.
+   * However, if getIsShutDown() then do nothing.
    * @param depth (optional) The depth starting from this node to announce new
    * names. If enableSync has already been called on a parent node, then this
    * overrides the depth starting from this node and children of this node. If
@@ -539,6 +548,13 @@ public:
     impl_->setDecryptor(decryptor);
   }
 
+  /**
+   * If any OnObjectNeeded callback returns true (as explained in
+   * addOnObjectNeeded) then wait for the callback to set the object. Otherwise,
+   * call express Interest on getFace().
+   * However, if getIsShutDown() then do nothing.
+   * @param mustBeFresh The MustBeFresh flag if this calls expressInterest.
+   */
   void
   objectNeeded(bool mustBeFresh = true) { impl_->objectNeeded(mustBeFresh); }
 
@@ -571,6 +587,22 @@ public:
    */
   void
   experimentalClear() { impl_->experimentalClear(); }
+
+  /**
+   * Set the isShutDown flag for this and all child Namespace nodes, so that no
+   * callbacks are processed. If this node also has a Face, then unregister its
+   * prefix. You can call shutdown() if your application will keep running but
+   * you need to shut down and delete a Namespace.
+   */
+  void
+  shutdown() { impl_->shutdown(); }
+
+  /**
+   * Check if the isShutDown flag is set on this or any parent Namespace node.
+   * @return True if the isShutDown flag is set on this or any parent node.
+   */
+  bool
+  getIsShutDown() { return impl_->getIsShutDown(); }
 
   /**
    * Get the next unique callback ID. This uses an atomic_uint64_t to be thread 
@@ -610,6 +642,7 @@ public:
    * immediately, which sets the object and sets the state to OBJECT_READY. This 
    * method name has an underscore because is normally only called from a
    * Handler, not from the application.
+   * However, if getIsShutDown() then do nothing.
    * @param blob The Blob to deserialize.
    * @param onObjectSet (optional) If supplied, after setting the object, this
    * calls onObjectSet(objectNamespace).
@@ -814,6 +847,12 @@ public:
       children_.clear();
     }
 
+    void
+    shutdown();
+
+    bool
+    getIsShutDown();
+
     ndn::Face*
     getFace_();
 
@@ -831,6 +870,9 @@ public:
     void
     setObject_(const ndn::ptr_lib::shared_ptr<Object>& object)
     {
+      if (getIsShutDown())
+        return;
+
       object_ = object;
       setState(NamespaceState_OBJECT_READY);
     }
@@ -869,6 +911,7 @@ public:
      * Set the state of this Namespace object and call the OnStateChanged
      * callbacks for this and all parents. This does not check if this Namespace
      * object already has the given state.
+     * However, if getIsShutDown() then do nothing.
      * @param state The new state.
      */
     void
@@ -881,6 +924,7 @@ public:
      * Set the validate state of this Namespace object and call the
      * OnValidateStateChanged callbacks for this and all parents. This does not
      * check if this Namespace object already has the given validate state.
+     * However, if getIsShutDown() then do nothing.
      * @param validateState The new validate state.
      */
     void
@@ -902,6 +946,7 @@ public:
      * Set object_ to the given value, set the state to OBJECT_READY, and fire
      * the OnStateChanged callbacks. This may be called from canDeserialize in a
      * handler.
+     * However, if getIsShutDown() then do nothing.
      * @param object The deserialized object.
      * @param onObjectSet If supplied, after setting the object, this calls
      * onObjectSet(objectNamespace).
@@ -917,6 +962,7 @@ public:
      * face.putData(). If an existing Data packet is not found, add the
      * Interest to the PendingIncomingInterestTable so that a later call to
      * setData may satisfy it.
+     * However, if getIsShutDown() then do nothing.
      */
     void
     onInterest
@@ -960,6 +1006,7 @@ public:
      * For each new name, create the Namespace node if needed (which will fire
      * OnStateChanged with NAME_EXISTS). However, if the the name of the root
      * Namespace node is not a prefix of the name, don't add it.
+     * However, if getIsShutDown() then do nothing.
      * @param names The set of new Names.
      */
     void
@@ -1001,6 +1048,14 @@ public:
     ndn::ptr_lib::shared_ptr<ndn::FullPSync2017> fullPSync_;
     ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
     int syncDepth_; // -1 if not specified.
+    // The isShutDown_ for just this Namespace node.
+    bool isShutDown_;
+    // This is set by getIsShutDown().
+    bool cachedIsShutDown_;
+    // This is set by getIsShutDown().
+    uint64_t isShutDownCacheTime_;
+    // This is only used in root_ to help with cachedIsShutDown_;
+    uint64_t lastShutdownCallTime_;
   };
 
 private:

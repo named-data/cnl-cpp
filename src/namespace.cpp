@@ -72,7 +72,9 @@ Namespace::Impl::Impl
   root_(this), state_(NamespaceState_NAME_EXISTS),
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), 
   freshnessExpiryTimeMilliseconds_(-1.0), face_(0), decryptor_(0),
-  maxInterestLifetime_(-1), syncDepth_(-1), registeredPrefixId_(0)
+  maxInterestLifetime_(-1), syncDepth_(-1), registeredPrefixId_(0),
+  isShutDown_(false), cachedIsShutDown_(false), isShutDownCacheTime_(0),
+  lastShutdownCallTime_(0)
 {
 }
 
@@ -150,6 +152,9 @@ Namespace::Impl::getChildComponents()
 void
 Namespace::Impl::serializeObject(const ptr_lib::shared_ptr<Object>& object)
 {
+  if (getIsShutDown())
+    return;
+
   // TODO: What if this node already has a _data and/or _object?
 
   // TODO: Call handler canSerialize and set state SERIALIZING.
@@ -194,6 +199,9 @@ Namespace::Impl::serializeObject(const ptr_lib::shared_ptr<Object>& object)
 bool
 Namespace::Impl::setData(const ptr_lib::shared_ptr<Data>& data)
 {
+  if (getIsShutDown())
+    return false;
+
   if (data_)
     // We already have an attached object.
     return false;
@@ -264,12 +272,16 @@ Namespace::Impl::setFace
     // Remove the Face if it is set.
     if (face_) {
       face_->removeRegisteredPrefix(registeredPrefixId_);
+      registeredPrefixId_ = 0;
       // TODO: Remove the Face and callbacks from root_->fullPSync_.
       face_ = 0;
     }
 
     return;
   }
+
+  if (getIsShutDown())
+    return;
 
   face_ = face;
 
@@ -291,6 +303,9 @@ Namespace::Impl::setFace
 void
 Namespace::Impl::enableSync(int depth)
 {
+  if (getIsShutDown())
+    return;
+
   if (!root_->fullPSync_) {
     Face* face = getFace_();
     if (!face)
@@ -309,6 +324,9 @@ Namespace::Impl::enableSync(int depth)
 void
 Namespace::Impl::objectNeeded(bool mustBeFresh)
 {
+  if (getIsShutDown())
+    return;
+
   // Check if we already have the object.
   Interest interest(name_);
   // TODO: Make the lifetime configurable.
@@ -361,6 +379,68 @@ Namespace::Impl::removeCallback(uint64_t callbackId)
 {
   onStateChangedCallbacks_.erase(callbackId);
   onValidateStateChangedCallbacks_.erase(callbackId);
+}
+
+void
+Namespace::Impl::shutdown()
+{
+  isShutDown_ = true;
+
+  // Update lastShutdownCallTime_. This will cause getIsShutDown() to re-cache.
+  uint64_t now = (uint64_t)ndn_getNowMilliseconds();
+  if (root_->lastShutdownCallTime_ < now)
+    root_->lastShutdownCallTime_ = now;
+  else
+    // Make sure lastShutdownCallTime_ increments on each call.
+    root_->lastShutdownCallTime_ += 1;
+
+  // Set cachedIsShutDown_ for this and parent nodes.
+  getIsShutDown();
+}
+
+bool
+Namespace::Impl::getIsShutDown()
+{
+  // Get a local snapshot of lastShutdownCallTime.
+  uint64_t lastShutdownCallTime = root_->lastShutdownCallTime_;
+
+  if (lastShutdownCallTime != 0 && isShutDownCacheTime_ == lastShutdownCallTime)
+    // Return the cached value.
+    return cachedIsShutDown_;
+
+  if (lastShutdownCallTime == 0) {
+    // Initialize lastShutdownCallTime_ so that isShutDownCacheTime_ matches next time.
+    root_->lastShutdownCallTime_ = (uint64_t)ndn_getNowMilliseconds();
+    lastShutdownCallTime = root_->lastShutdownCallTime_;
+  }
+
+  // Compute and cache the value.
+  bool saveCachedIsShutDown = cachedIsShutDown_;
+  if (isShutDown_)
+    // shutdown() was called on this node.
+    cachedIsShutDown_ = true;
+  else
+    // Recursively compute and cache getIsShutDown() up to the root.
+    cachedIsShutDown_ = (parent_ ? parent_->getIsShutDown() : false);
+
+  if (saveCachedIsShutDown == false && cachedIsShutDown_ == true) {
+    // We are shutting down this node for the first time.
+    if (face_) {
+      // We are shut down, so remove the Face and the callback.
+      face_->removeRegisteredPrefix(registeredPrefixId_);
+      registeredPrefixId_ = 0;
+      face_ = 0;
+    }
+
+    // Clear the callbacks since they have pointers to user code and handlers.
+    onStateChangedCallbacks_.clear();
+    onValidateStateChangedCallbacks_.clear();
+    onObjectNeededCallbacks_.clear();
+    onDeserializeNeededCallbacks_.clear();
+  }
+
+  isShutDownCacheTime_ = lastShutdownCallTime;
+  return cachedIsShutDown_;
 }
 
 Face*
@@ -455,6 +535,9 @@ void
 Namespace::Impl::deserialize_
   (const Blob& blob, const Handler::OnObjectSet& onObjectSet)
 {
+  if (getIsShutDown())
+    return;
+
   Namespace::Impl* impl = this;
   while (impl) {
     if (impl->fireOnDeserializeNeeded
@@ -506,6 +589,9 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
 void
 Namespace::Impl::setState(NamespaceState state)
 {
+  if (getIsShutDown())
+    return;
+
   state_ = state;
 
   // Fire callbacks.
@@ -520,6 +606,9 @@ void
 Namespace::Impl::fireOnStateChanged
   (Namespace& changedNamespace, NamespaceState state)
 {
+  if (getIsShutDown())
+    return;
+
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
   keys.reserve(onStateChangedCallbacks_.size());
@@ -547,6 +636,9 @@ Namespace::Impl::fireOnStateChanged
 void
 Namespace::Impl::setValidateState(NamespaceValidateState validateState)
 {
+  if (getIsShutDown())
+    return;
+
   validateState_ = validateState;
 
   // Fire callbacks.
@@ -561,6 +653,9 @@ void
 Namespace::Impl::fireOnValidateStateChanged
   (Namespace& changedNamespace, NamespaceValidateState validateState)
 {
+  if (getIsShutDown())
+    return;
+
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
   keys.reserve(onValidateStateChangedCallbacks_.size());
@@ -592,6 +687,9 @@ Namespace::Impl::fireOnValidateStateChanged
 bool
 Namespace::Impl::fireOnObjectNeeded(Namespace& neededNamespace)
 {
+  if (getIsShutDown())
+    return false;
+
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
   keys.reserve(onObjectNeededCallbacks_.size());
@@ -625,6 +723,9 @@ Namespace::Impl::fireOnDeserializeNeeded
   (Namespace& blobNamespace, const ndn::Blob& blob,
    const Handler::OnObjectSet& onObjectSet)
 {
+  if (getIsShutDown())
+    return false;
+
   Handler::OnDeserialized onDeserialized =
     bind(&Namespace::Impl::defaultOnDeserialized, shared_from_this(),
          _1, onObjectSet);
@@ -661,6 +762,9 @@ Namespace::Impl::defaultOnDeserialized
   (const ptr_lib::shared_ptr<Object>& object,
    const Handler::OnObjectSet& onObjectSet)
 {
+  if (getIsShutDown())
+    return;
+
   object_ = object;
   setState(NamespaceState_OBJECT_READY);
 
@@ -675,6 +779,9 @@ Namespace::Impl::onInterest
     uint64_t interestFilterId,
     const ptr_lib::shared_ptr<const InterestFilter>& filter)
 {
+  if (getIsShutDown())
+    return;
+
   Name interestName = interest->getName();
   if (interestName.size() >= 1 && interestName[-1].isImplicitSha256Digest())
     // Strip the implicit digest.
@@ -755,6 +862,9 @@ Namespace::Impl::onData
   (const ptr_lib::shared_ptr<const Interest>& interest,
    const ptr_lib::shared_ptr<Data>& data)
 {
+  if (getIsShutDown())
+    return;
+
   Namespace::Impl& dataNamespaceImpl = getChildImpl(data->getName());
   if (!dataNamespaceImpl.setData(data))
     // A Data packet is already attached.
@@ -793,6 +903,9 @@ Namespace::Impl::onData
 void
 Namespace::Impl::onTimeout(const ptr_lib::shared_ptr<const Interest>& interest)
 {
+  if (getIsShutDown())
+    return;
+
   // TODO: Need to detect a timeout on a child node.
   setState(NamespaceState_INTEREST_TIMEOUT);
 }
@@ -802,6 +915,9 @@ Namespace::Impl::onNetworkNack
   (const ptr_lib::shared_ptr<const Interest>& interest,
    const ptr_lib::shared_ptr<NetworkNack>& networkNack)
 {
+  if (getIsShutDown())
+    return;
+
   // TODO: Need to detect a network nack on a child node.
   networkNack_ = networkNack;
   setState(NamespaceState_INTEREST_NETWORK_NACK);
@@ -811,6 +927,9 @@ void
 Namespace::Impl::onDecryptionError
   (EncryptError::ErrorCode errorCode, const string& message)
 {
+  if (getIsShutDown())
+    return;
+
   ostringstream decryptionErrorText;
   decryptionErrorText << "Decryptor error " << errorCode << ": " + message;
   decryptionError_ = decryptionErrorText.str();
@@ -821,6 +940,9 @@ void
 Namespace::Impl::onNamesUpdate
   (const ptr_lib::shared_ptr<std::vector<Name>>& names)
 {
+  if (getIsShutDown())
+    return;
+
   for (vector<Name>::const_iterator name = names->begin(); name != names->end();
        ++name) {
     if (!name_.isPrefixOf(*name)) {
