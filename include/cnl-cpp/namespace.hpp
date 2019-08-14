@@ -565,6 +565,14 @@ public:
   removeCallback(uint64_t callbackId) { impl_->removeCallback(callbackId); }
 
   /**
+   * Clear the object and its children. This is a temporary experimental method
+   * to help with memory management until techniques are developed to swap
+   * objects in and out of memory.
+   */
+  void
+  experimentalClear() { impl_->experimentalClear(); }
+
+  /**
    * Get the next unique callback ID. This uses an atomic_uint64_t to be thread 
    * safe. This is an internal method only meant to be called by library
    * classes; the application should not call it.
@@ -798,6 +806,13 @@ public:
 
     void
     removeCallback(uint64_t callbackId);
+
+    void
+    experimentalClear()
+    {
+      object_.reset();
+      children_.clear();
+    }
 
     ndn::Face*
     getFace_();
