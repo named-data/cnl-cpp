@@ -526,8 +526,7 @@ Namespace::Impl::deserialize_
 
   Namespace::Impl* impl = this;
   while (impl) {
-    if (impl->fireOnDeserializeNeeded
-        (outerNamespace_, blob, onObjectSet)) {
+    if (impl->fireOnDeserializeNeeded(*this, blob, onObjectSet)) {
       // Wait for the Handler to set the object.
       setState(NamespaceState_DESERIALIZING);
       return;
@@ -706,15 +705,15 @@ Namespace::Impl::fireOnObjectNeeded(Namespace& neededNamespace)
 
 bool
 Namespace::Impl::fireOnDeserializeNeeded
-  (Namespace& blobNamespace, const ndn::Blob& blob,
+  (Namespace::Impl& blobNamespaceImpl, const ndn::Blob& blob,
    const Handler::OnObjectSet& onObjectSet)
 {
   if (getIsShutDown())
     return false;
 
   Handler::OnDeserialized onDeserialized =
-    bind(&Namespace::Impl::defaultOnDeserialized, shared_from_this(),
-         _1, onObjectSet);
+    bind(&Namespace::Impl::defaultOnDeserialized,
+         blobNamespaceImpl.shared_from_this(), _1, onObjectSet);
 
   // Copy the keys before iterating since callbacks can change the list.
   vector<uint64_t> keys;
@@ -729,7 +728,8 @@ Namespace::Impl::fireOnDeserializeNeeded
       onDeserializeNeededCallbacks_.find(keys[i]);
     if (entry != onDeserializeNeededCallbacks_.end()) {
       try {
-        if (entry->second(blobNamespace, blob, onDeserialized, entry->first))
+        if (entry->second
+            (blobNamespaceImpl.outerNamespace_, blob, onDeserialized, entry->first))
           return true;
       } catch (const std::exception& ex) {
         _LOG_ERROR("Namespace::fireOnDeserializeNeeded: Error in onDeserializeNeeded: " <<

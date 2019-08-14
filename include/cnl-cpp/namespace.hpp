@@ -939,7 +939,7 @@ public:
 
     bool
     fireOnDeserializeNeeded
-      (Namespace& blobNamespace, const ndn::Blob& blob,
+      (Namespace::Impl& blobNamespaceImpl, const ndn::Blob& blob,
        const Handler::OnObjectSet& onObjectSet);
 
     /**
