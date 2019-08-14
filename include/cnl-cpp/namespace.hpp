@@ -1053,9 +1053,9 @@ public:
     // This is set by getIsShutDown().
     bool cachedIsShutDown_;
     // This is set by getIsShutDown().
-    uint64_t isShutDownCacheTime_;
+    uint64_t cachedIsShutDownCount_;
     // This is only used in root_ to help with cachedIsShutDown_;
-    uint64_t lastShutdownCallTime_;
+    uint64_t shutdownCount_;
   };
 
 private:

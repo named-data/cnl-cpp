@@ -73,8 +73,8 @@ Namespace::Impl::Impl
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), 
   freshnessExpiryTimeMilliseconds_(-1.0), face_(0), decryptor_(0),
   maxInterestLifetime_(-1), syncDepth_(-1), registeredPrefixId_(0),
-  isShutDown_(false), cachedIsShutDown_(false), isShutDownCacheTime_(0),
-  lastShutdownCallTime_(0)
+  isShutDown_(false), cachedIsShutDown_(false), cachedIsShutDownCount_(0),
+  shutdownCount_(1)
 {
 }
 
@@ -386,13 +386,8 @@ Namespace::Impl::shutdown()
 {
   isShutDown_ = true;
 
-  // Update lastShutdownCallTime_. This will cause getIsShutDown() to re-cache.
-  uint64_t now = (uint64_t)ndn_getNowMilliseconds();
-  if (root_->lastShutdownCallTime_ < now)
-    root_->lastShutdownCallTime_ = now;
-  else
-    // Make sure lastShutdownCallTime_ increments on each call.
-    root_->lastShutdownCallTime_ += 1;
+  // Increment shutdownCount_. This will cause getIsShutDown() to re-cache.
+  ++root_->shutdownCount_;
 
   // Set cachedIsShutDown_ for this and parent nodes.
   getIsShutDown();
@@ -401,18 +396,9 @@ Namespace::Impl::shutdown()
 bool
 Namespace::Impl::getIsShutDown()
 {
-  // Get a local snapshot of lastShutdownCallTime.
-  uint64_t lastShutdownCallTime = root_->lastShutdownCallTime_;
-
-  if (lastShutdownCallTime != 0 && isShutDownCacheTime_ == lastShutdownCallTime)
+  if (cachedIsShutDownCount_ == root_->shutdownCount_)
     // Return the cached value.
     return cachedIsShutDown_;
-
-  if (lastShutdownCallTime == 0) {
-    // Initialize lastShutdownCallTime_ so that isShutDownCacheTime_ matches next time.
-    root_->lastShutdownCallTime_ = (uint64_t)ndn_getNowMilliseconds();
-    lastShutdownCallTime = root_->lastShutdownCallTime_;
-  }
 
   // Compute and cache the value.
   bool saveCachedIsShutDown = cachedIsShutDown_;
@@ -439,7 +425,7 @@ Namespace::Impl::getIsShutDown()
     onDeserializeNeededCallbacks_.clear();
   }
 
-  isShutDownCacheTime_ = lastShutdownCallTime;
+  cachedIsShutDownCount_ = root_->shutdownCount_;
   return cachedIsShutDown_;
 }
 
