@@ -718,10 +718,10 @@ public:
     getName() const { return name_; }
 
     Namespace*
-    getParent() { return &parent_->outerNamespace_; }
+    getParent();
 
     Namespace*
-    getRoot() { return &root_->outerNamespace_; }
+    getRoot();
 
     NamespaceState
     getState() { return state_; }

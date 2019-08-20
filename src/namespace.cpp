@@ -37,7 +37,8 @@ Namespace::Handler&
 Namespace::Handler::setNamespace(Namespace* nameSpace)
 {
   if (namespace_ && namespace_ != nameSpace)
-    throw runtime_error("This Handler is already attached to a different Namespace object");
+    throw runtime_error
+      ("This Handler is already attached to a different Namespace object");
 
   namespace_ = nameSpace;
   onNamespaceSet();
@@ -76,6 +77,26 @@ Namespace::Impl::Impl
   isShutDown_(false), cachedIsShutDown_(false), cachedIsShutDownCount_(0),
   shutdownCount_(1)
 {
+}
+
+Namespace*
+Namespace::Impl::getParent()
+{
+  if (getIsShutDown())
+    throw runtime_error
+      ("Cannot get the parent of this Namespace node because it is shut down");
+
+  return &parent_->outerNamespace_;
+}
+
+Namespace*
+Namespace::Impl::getRoot()
+{ 
+  if (getIsShutDown())
+    throw runtime_error
+      ("Cannot get the root of this Namespace node because it is shut down");
+
+  return &root_->outerNamespace_;
 }
 
 bool
@@ -432,6 +453,10 @@ Namespace::Impl::getIsShutDown()
 Face*
 Namespace::Impl::getFace_()
 {
+  if (getIsShutDown())
+    throw runtime_error
+      ("Cannot get the Face of this Namespace node because it is shut down");
+
   Namespace::Impl* impl = this;
   while (impl) {
     if (impl->face_)
@@ -445,6 +470,10 @@ Namespace::Impl::getFace_()
 KeyChain*
 Namespace::Impl::getKeyChain_()
 {
+  if (getIsShutDown())
+    throw runtime_error
+      ("Cannot get the KeyChain of this Namespace node because it is shut down");
+
   Namespace::Impl* impl = this;
   while (impl) {
     if (impl->keyChain_)
@@ -458,6 +487,10 @@ Namespace::Impl::getKeyChain_()
 Namespace::Impl*
 Namespace::Impl::getSyncNode()
 {
+  if (getIsShutDown())
+    throw runtime_error
+      ("Cannot get the Sync Node of this Namespace node because it is shut down");
+
   Namespace::Impl* impl = this;
   while (impl) {
     if (impl->syncDepth_ >= 0)
@@ -471,6 +504,10 @@ Namespace::Impl::getSyncNode()
 Milliseconds
 Namespace::Impl::getMaxInterestLifetime()
 {
+  if (getIsShutDown())
+    throw runtime_error
+      ("Cannot get the MaxInterestLifetime of this Namespace node because it is shut down");
+
   Namespace::Impl* impl = this;
   while (impl) {
     if (impl->maxInterestLifetime_ >= 0)
@@ -485,6 +522,10 @@ Namespace::Impl::getMaxInterestLifetime()
 const MetaInfo*
 Namespace::Impl::getNewDataMetaInfo_()
 {
+  if (getIsShutDown())
+    throw runtime_error
+      ("Cannot get the NewDataMetaInfo of this Namespace node because it is shut down");
+
   Namespace::Impl* impl = this;
   while (impl) {
     if (impl->newDataMetaInfo_)
@@ -498,6 +539,10 @@ Namespace::Impl::getNewDataMetaInfo_()
 DecryptorV2*
 Namespace::Impl::getDecryptor()
 {
+  if (getIsShutDown())
+    throw runtime_error
+      ("Cannot get the Decryptor of this Namespace node because it is shut down");
+
   Namespace::Impl* impl =this;
   while (impl) {
     if (impl->decryptor_)
@@ -545,6 +590,10 @@ Namespace::Impl::deserialize_
 Namespace&
 Namespace::Impl::createChild(const Name::Component& component, bool fireCallbacks)
 {
+  if (getIsShutDown())
+    throw runtime_error
+      ("Cannot create a child of this Namespace node because it is shut down");
+
   ptr_lib::shared_ptr<Namespace> child =
     ptr_lib::make_shared<Namespace>(Name(name_).append(component));
   child->impl_->parent_ = this;
