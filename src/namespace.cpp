@@ -68,14 +68,14 @@ Namespace::getNextCallbackId()
 }
 
 Namespace::Impl::Impl
-  (Namespace& outerNamespace, const Name& name, KeyChain* keyChain)
+  (Namespace& outerNamespace, const Name& name, KeyChain* keyChain,
+   const ndn::ptr_lib::shared_ptr<bool>& isShutDown)
 : outerNamespace_(outerNamespace), name_(name), keyChain_(keyChain), parent_(0),
   root_(this), state_(NamespaceState_NAME_EXISTS),
   validateState_(NamespaceValidateState_WAITING_FOR_DATA), 
   freshnessExpiryTimeMilliseconds_(-1.0), face_(0), decryptor_(0),
   maxInterestLifetime_(-1), syncDepth_(-1), registeredPrefixId_(0),
-  isShutDown_(false), cachedIsShutDown_(false), cachedIsShutDownCount_(0),
-  shutdownCount_(1)
+  isShutDown_(isShutDown)
 {
 }
 
@@ -405,33 +405,19 @@ Namespace::Impl::removeCallback(uint64_t callbackId)
 void
 Namespace::Impl::shutdown()
 {
-  isShutDown_ = true;
+  if (parent_)
+    throw runtime_error("Can only call shutdown() on the root Namespace node");
 
-  // Increment shutdownCount_. This will cause getIsShutDown() to re-cache.
-  ++root_->shutdownCount_;
+  *isShutDown_ = true;
 
-  // Set cachedIsShutDown_ for this and parent nodes.
+  // This will unregister the face_ if needed.
   getIsShutDown();
 }
 
 bool
 Namespace::Impl::getIsShutDown()
 {
-  if (cachedIsShutDownCount_ == root_->shutdownCount_)
-    // Return the cached value.
-    return cachedIsShutDown_;
-
-  // Compute and cache the value.
-  bool saveCachedIsShutDown = cachedIsShutDown_;
-  if (isShutDown_)
-    // shutdown() was called on this node.
-    cachedIsShutDown_ = true;
-  else
-    // Recursively compute and cache getIsShutDown() up to the root.
-    cachedIsShutDown_ = (parent_ ? parent_->getIsShutDown() : false);
-
-  if (saveCachedIsShutDown == false && cachedIsShutDown_ == true) {
-    // We are shutting down this node for the first time.
+  if (*isShutDown_) {
     if (face_) {
       // We are shut down, so remove the Face and the callback.
       face_->removeRegisteredPrefix(registeredPrefixId_);
@@ -439,15 +425,10 @@ Namespace::Impl::getIsShutDown()
       face_ = 0;
     }
 
-    // Clear the callbacks since they have pointers to user code and handlers.
-    onStateChangedCallbacks_.clear();
-    onValidateStateChangedCallbacks_.clear();
-    onObjectNeededCallbacks_.clear();
-    onDeserializeNeededCallbacks_.clear();
+    return true;
   }
-
-  cachedIsShutDownCount_ = root_->shutdownCount_;
-  return cachedIsShutDown_;
+  else
+    return false;
 }
 
 Face*
@@ -594,8 +575,9 @@ Namespace::Impl::createChild(const Name::Component& component, bool fireCallback
     throw runtime_error
       ("Cannot create a child of this Namespace node because it is shut down");
 
-  ptr_lib::shared_ptr<Namespace> child =
-    ptr_lib::make_shared<Namespace>(Name(name_).append(component));
+  // Every child has a shared_ptr to the same isShutDown_ flag.
+  ptr_lib::shared_ptr<Namespace> child(new Namespace
+    (Name(name_).append(component), (KeyChain *)0, isShutDown_));
   child->impl_->parent_ = this;
   child->impl_->root_ = root_;
   children_[component] = child;

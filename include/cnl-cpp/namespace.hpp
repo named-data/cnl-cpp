@@ -162,7 +162,8 @@ public:
    * You can also call setKeyChain().
    */
   Namespace(const ndn::Name& name, ndn::KeyChain* keyChain = 0)
-  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, name, keyChain))
+  : impl_(ndn::ptr_lib::make_shared<Impl>
+          (*this, name, keyChain, ndn::ptr_lib::make_shared<bool>(false)))
   {
   }
 
@@ -589,10 +590,10 @@ public:
   experimentalClear() { impl_->experimentalClear(); }
 
   /**
-   * Set the isShutDown flag for this and all child Namespace nodes, so that no
-   * callbacks are processed. If this node also has a Face, then unregister its
-   * prefix. You can call shutdown() if your application will keep running but
-   * you need to shut down and delete a Namespace.
+   * Set the isShutDown flag for all Namespace nodes, so that no callbacks are 
+   * processed. If a node also has a Face, then unregister its prefix. You can
+   * call shutdown() if your application will keep running but you need to shut
+   * down and delete a Namespace. You must call shutdown() on the root node.
    */
   void
   shutdown() { impl_->shutdown(); }
@@ -710,9 +711,12 @@ public:
      * Create a new Impl, which should belong to a shared_ptr.
      * @param outerNamespace The Namespace which is creating this inner Imp.
      * @param name See the Namespace constructor.
+     * @param isShutDown The isShutDown flag from the root (or a new bool(false)
+     * if this is the root).
      */
     Impl
-      (Namespace& outerNamespace, const ndn::Name& name, ndn::KeyChain* keyChain);
+      (Namespace& outerNamespace, const ndn::Name& name, ndn::KeyChain* keyChain,
+       const ndn::ptr_lib::shared_ptr<bool>& isShutDown);
 
     const ndn::Name&
     getName() const { return name_; }
@@ -1048,20 +1052,24 @@ public:
     ndn::ptr_lib::shared_ptr<ndn::FullPSync2017> fullPSync_;
     ndn::Milliseconds maxInterestLifetime_; // -1 if not specified.
     int syncDepth_; // -1 if not specified.
-    // The isShutDown_ for just this Namespace node.
-    bool isShutDown_;
-    // This is set by getIsShutDown().
-    bool cachedIsShutDown_;
-    // This is set by getIsShutDown().
-    uint64_t cachedIsShutDownCount_;
-    // This is only used in root_ to help with cachedIsShutDown_;
-    uint64_t shutdownCount_;
+    ndn::ptr_lib::shared_ptr<bool> isShutDown_;
   };
 
 private:
+  friend class Impl;
+
   // Disable the copy constructor and assignment operator.
   Namespace(const Namespace& other);
   Namespace& operator=(const Namespace& other);
+
+  /**
+   * This private constructor is used by Impl::createChild for passing isShutDown.
+   */
+  Namespace(const ndn::Name& name, ndn::KeyChain* keyChain,
+            const ndn::ptr_lib::shared_ptr<bool>& isShutDown)
+  : impl_(ndn::ptr_lib::make_shared<Impl>(*this, name, keyChain, isShutDown))
+  {
+  }
 
   ndn::ptr_lib::shared_ptr<Impl> impl_;
 #ifdef NDN_CPP_HAVE_BOOST_ASIO
