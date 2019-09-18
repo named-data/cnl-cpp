@@ -117,6 +117,8 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
 {
   if (state == NamespaceState_INTEREST_TIMEOUT ||
       state == NamespaceState_INTEREST_NETWORK_NACK) {
+    _LOG_INFO("GeneralizedObjectStreamHandler: Got timeout or nack for " <<
+               changedNamespace.getName());
     if (&changedNamespace == latestNamespace_) {
       // Timeout or network NACK, so try to fetch again.
       latestNamespace_->getFace_()->callLater
@@ -132,6 +134,8 @@ GeneralizedObjectStreamHandler::Impl::onStateChanged
           maxRequestedSequenceNumber_) {
       // The highest pipelined request timed out, so request the _latest.
       // TODO: Should we do this for the lowest requested?
+      _LOG_INFO("GeneralizedObjectStreamHandler: Requesting _latest because the highest pipelined request timed out: " <<
+                 changedNamespace.getName());
       latestNamespace_->objectNeeded(true);
       return;
     }
