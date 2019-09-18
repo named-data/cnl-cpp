@@ -131,7 +131,7 @@ public:
      * A convenience method to call getNamespace().objectNeeded().
      */
     void
-    objectNeeded(bool mustBeFresh = true);
+    objectNeeded(bool mustBeFresh = false);
 
   protected:
     /**
@@ -557,7 +557,7 @@ public:
    * @param mustBeFresh The MustBeFresh flag if this calls expressInterest.
    */
   void
-  objectNeeded(bool mustBeFresh = true) { impl_->objectNeeded(mustBeFresh); }
+  objectNeeded(bool mustBeFresh = false) { impl_->objectNeeded(mustBeFresh); }
 
   /**
    * Set the maximum lifetime for re-expressed interests to be used when this or
