@@ -554,7 +554,8 @@ public:
    * addOnObjectNeeded) then wait for the callback to set the object. Otherwise,
    * call express Interest on getFace().
    * However, if getIsShutDown() then do nothing.
-   * @param mustBeFresh The MustBeFresh flag if this calls expressInterest.
+   * @param mustBeFresh (optional) The MustBeFresh flag if this calls
+   * expressInterest. If omitted, use false.
    */
   void
   objectNeeded(bool mustBeFresh = false) { impl_->objectNeeded(mustBeFresh); }
