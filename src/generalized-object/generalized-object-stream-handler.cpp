@@ -63,6 +63,22 @@ GeneralizedObjectStreamHandler::Impl::setObject
 }
 
 void
+GeneralizedObjectStreamHandler::Impl::setPipelineSize(int pipelineSize)
+{
+  if (pipelineSize < 0)
+    pipelineSize = 0;
+
+  if (pipelineSize == 0 && pipelineSize_ > 0)
+    throw runtime_error
+      ("GeneralizedObjectStreamHandler.setPipelineSize: Cannot change the pipeline size from non-zero to zero");
+  if (pipelineSize > 0 && pipelineSize_ == 0)
+    throw runtime_error
+      ("GeneralizedObjectStreamHandler.setPipelineSize: Cannot change the pipeline size from zero to non-zero");
+
+  pipelineSize_ = pipelineSize;
+}
+
+void
 GeneralizedObjectStreamHandler::Impl::onNamespaceSet(Namespace* nameSpace)
 {
   // Store getNamespace() in impl_. We do this instead of keeping a pointer to

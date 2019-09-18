@@ -52,6 +52,7 @@ public:
    * use its name to fetch the generalized object. In this case, the producer
    * can call setLatestPacketFreshnessPeriod to set the freshness period to less
    * than the expected period of producing new generalized objects.
+   * If omitted, use a pipeline size of 8.
    * @param onSequencedGeneralizedObject (optional) When the ContentMetaInfo is
    * received for a new sequence number and the hasSegments is false, this calls
    * onSequencedGeneralizedObject(sequenceNumber, contentMetaInfo, objectNamespace)
@@ -145,6 +146,26 @@ public:
   }
 
   /**
+   * Get the pipeline size.
+   * @return The pipeline size.
+   */
+  int
+  getPipelineSize() { return impl_->getPipelineSize(); }
+
+  /**
+   * Change the pipeline size that was set in the constructor. This is only
+   * valid if the pipeline size in the constructor was non-zero. It is an error
+   * to set the pipeline size to zero if it was non-zero and vice versa, since
+   * this behavior is undefined.
+   * @param pipelineSize The pipeline size.
+   */
+  void
+  setPipelineSize(int pipelineSize)
+  {
+    impl_->setPipelineSize(pipelineSize);
+  }
+
+  /**
    * Get the maximum length of the payload of one segment, used to split a
    * larger payload into segments (if the ContentMetaInfo hasSegments is true
    * for a particular generalized object).
@@ -204,6 +225,12 @@ private:
     {
       latestPacketFreshnessPeriod_ = latestPacketFreshnessPeriod;
     }
+
+    int
+    getPipelineSize() { return pipelineSize_; }
+
+    void
+    setPipelineSize(int pipelineSize);
 
     size_t
     getMaxSegmentPayloadLength()
