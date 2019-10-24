@@ -29,7 +29,7 @@ To build in a terminal, change directory to the CNL-CPP root. Enter:
 
 To configure on macOS, enter:
 
-    ./configure CPPFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib"
+    ./configure ADD_CFLAGS=-I/usr/local/opt/openssl/include ADD_CXXFLAGS=-I/usr/local/opt/openssl/include ADD_LDFLAGS=-L/usr/local/opt/openssl/lib
 
 To configure on other systems, enter:
 
