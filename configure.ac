@@ -154,6 +154,9 @@ if test "$HAVE_PROTOBUF" == "1" ; then
   AS_IF([test "${PROTOC}" == "no"], [AC_MSG_ERROR([ProtoBuf compiler "protoc" not found.])])
 fi
 
+# This defines PTHREAD_CFLAGS and PTHREAD_LIBS.
+ACX_PTHREAD
+
 DX_HTML_FEATURE(ON)
 DX_CHM_FEATURE(OFF)
 DX_CHI_FEATURE(OFF)
