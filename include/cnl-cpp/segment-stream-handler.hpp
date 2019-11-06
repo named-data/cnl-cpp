@@ -24,6 +24,17 @@
 
 #include "namespace.hpp"
 
+extern "C" {
+
+/**
+ * Get the C string of the "_manifest" name component. (Honestly, this is only
+ * here so that autotools AC_CHECK_LIB has something to check for.)
+ */
+const char*
+cnl_cpp_getSegmentStreamHandlerManifestComponent();
+
+}
+
 namespace cnl_cpp {
 
 /**
@@ -279,7 +290,7 @@ private:
   class Values {
   public:
     Values()
-    : NAME_COMPONENT_MANIFEST("_manifest")
+    : NAME_COMPONENT_MANIFEST(cnl_cpp_getSegmentStreamHandlerManifestComponent())
     {}
 
     ndn::Name::Component NAME_COMPONENT_MANIFEST;

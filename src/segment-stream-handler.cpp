@@ -34,6 +34,13 @@ using namespace ndn::func_lib;
 
 INIT_LOGGER("cnl_cpp.SegmentStreamHandler");
 
+extern "C" {
+
+const char*
+cnl_cpp_getSegmentStreamHandlerManifestComponent() {  return "_manifest"; }
+
+}
+
 namespace cnl_cpp {
 
 void
