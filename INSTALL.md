@@ -6,10 +6,11 @@ Prerequisites
 (These are prerequisites to build CNL-CPP.  To do development of CNL-CPP code
 and update the build system, see Development Prerequisites.)
 
-* Required: NDN-CPP
+* Required: NDN-CPP (https://github.com/named-data/ndn-cpp)
 * Required: libcrypto
 * Optional: libsqlite3 (for key storage in NDN-CPP)
 * Optional: OSX Security framework (for key storage in NDN-CPP)
+* Optional: Protobuf (for generalized objects)
 * Optional: log4cxx (for debugging and log output in this and in NDN-CPP)
 * Optional: Doxygen (to make documentation)
 * Optional: Boost (min version 1.48) with asio (for ThreadsafeFace and async I/O in NDN-CPP)
